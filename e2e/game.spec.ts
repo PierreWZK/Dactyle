@@ -209,3 +209,49 @@ test('le thème visuel est réinitialisé sur les menus', async ({ page }) => {
   await page.goto('/');
   expect(await page.evaluate(() => document.documentElement.dataset.tier)).toBeUndefined();
 });
+
+test.describe('niveau du jour', () => {
+  test('mêmes mots à chaque partie, résultat officiel unique, partage par copie sur ordinateur', async ({ page, context }, info) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {});
+    await page.goto('/');
+    await expect(page.locator('#daily')).toContainText('Pas encore joué');
+    await page.locator('#daily').click();
+    await expect(page.locator('.hud-label')).toHaveText('Niveau du jour');
+    await expect(page.locator('#words li')).toHaveCount(10);
+    const first = (await page.locator('#words li').allTextContents()).map((w) => w.trim());
+    await typeAllWords(page);
+    await expect(page.locator('.title')).toHaveText('Réussi !');
+    await expect(page.locator('.badge')).toContainText('officiel du jour enregistré');
+
+    if (info.project.name === 'desktop') {
+      await expect(page.locator('#share-text')).toContainText('Niveau du jour');
+      await expect(page.locator('#share-text')).toContainText('10/10');
+      await page.locator('#copy').click();
+      await expect(page.locator('#copy')).toHaveText('Copié ✓');
+      const clip = await page.evaluate(() => navigator.clipboard.readText());
+      expect(clip).toContain('MPM');
+      expect(clip).toContain('https://dactyle.projectp.fr');
+    } else {
+      await expect(page.locator('#copy')).toHaveCount(0); // pas de bouton de partage sur mobile
+    }
+
+    // Rejouer : mêmes mots, mais seul le premier résultat est officiel.
+    await page.getByRole('button', { name: /Rejouer/ }).click();
+    const second = (await page.locator('#words li').allTextContents()).map((w) => w.trim());
+    expect(second).toEqual(first);
+    await typeAllWords(page);
+    await expect(page.locator('.badge')).toContainText('Entraînement');
+
+    await page.reload();
+    await expect(page.locator('#daily')).toContainText('Ton résultat : réussi');
+  });
+
+  test('Entrée relance le niveau du jour et la partie compte les 10 thèmes', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('#daily').click();
+    await typeAllWords(page);
+    await expect(page.locator('.title')).toHaveText('Réussi !');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.hud-label')).toHaveText('Niveau du jour');
+  });
+});

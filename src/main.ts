@@ -2,11 +2,14 @@ import './style.css';
 import { THEMES, type Theme } from './data/themes';
 import { LEVEL_COUNT, buildLevel } from './data/levels';
 import { TypingGame, type GameResult } from './game/engine';
+import { buildDaily, shareText, todayKey, type DailyLevel } from './game/daily';
 import {
+  getDaily,
   getProgress,
   getSettings,
   globalStats,
   isLevelUnlocked,
+  recordDaily,
   recordResult,
   setStrict,
 } from './storage/save';
@@ -26,6 +29,7 @@ import {
 const app = document.querySelector<HTMLElement>('#app')!;
 
 let theme: Theme = THEMES[0];
+let daily: DailyLevel | null = null; // non nul pendant une partie du niveau du jour
 let level = 1;
 let game: TypingGame;
 let frame = 0;
@@ -58,7 +62,8 @@ function showThemes(): void {
   const g = globalStats();
   show(`
     <h1 class="title">Dactyle</h1>
-    <p class="subtitle">Choisis un thème</p>
+    ${dailyCard()}
+    <p class="subtitle">Ou choisis un thème</p>
     <label class="toggle">
       <input type="checkbox" id="strict" ${getSettings().strict ? 'checked' : ''} />
       <span>Mode strict : accents et majuscules obligatoires</span>
@@ -73,6 +78,7 @@ function showThemes(): void {
       }).join('')}
     </div>
     <p class="summary">Parties : ${g.played} · Réussies : ${g.won} · Meilleure vitesse : ${g.bestWpm} MPM</p>`);
+  el('daily').addEventListener('click', startDaily);
   el<HTMLInputElement>('strict').addEventListener('change', (e) => {
     setStrict((e.target as HTMLInputElement).checked);
   });
@@ -82,6 +88,19 @@ function showThemes(): void {
       showLevels();
     });
   });
+}
+
+function dailyCard(): string {
+  const today = todayKey();
+  const mine = getDaily(today);
+  const status = mine
+    ? `Ton résultat : ${mine.success ? 'réussi' : 'échec'} · ${formatSeconds(mine.elapsedMs)} · ${mine.precision} %`
+    : 'Pas encore joué aujourd’hui';
+  return `<button class="card daily" id="daily">
+    <strong>Niveau du jour</strong>
+    <span>${today} · 10 mots de 10 thèmes, les mêmes pour tous</span>
+    <span>${status}</span>
+  </button>`;
 }
 
 function showLevels(): void {
@@ -111,6 +130,7 @@ function showLevels(): void {
 
 function startLevel(n: number): void {
   level = n;
+  daily = null;
   const key = `${theme.id}:${n}`;
   const played = seen.get(key) ?? new Set<string>();
   const spec = buildLevel(theme, n, played);
@@ -123,14 +143,27 @@ function startLevel(n: number): void {
   applyLook(look);
   combo = 0;
   showGame();
-  showIntro(n, look);
+  showIntro(`Niveau ${n}`, look);
+  startLoop();
+}
+
+// Niveau du jour : mêmes mots pour tout le monde, sans mode strict.
+function startDaily(): void {
+  daily = buildDaily(todayKey());
+  strictNow = false;
+  game = new TypingGame(daily.words, daily.timeLimitMs, false);
+  look = { hue: 45, tier: 3, tierName: 'Du jour' };
+  applyLook(look);
+  combo = 0;
+  showGame();
+  showIntro('Niveau du jour', look);
   startLoop();
 }
 
 function showGame(): void {
   show(`
     <header class="hud">
-      <span class="hud-label">${theme.name} · Niveau ${level}${strictNow ? ' · Strict' : ''}</span>
+      <span class="hud-label">${daily ? 'Niveau du jour' : `${theme.name} · Niveau ${level}${strictNow ? ' · Strict' : ''}`}</span>
       <span class="combo" id="combo"></span>
       <span class="timer" id="timer"></span>
     </header>
@@ -227,6 +260,10 @@ function loop(): void {
 function showResult(): void {
   stopLoop();
   const r: GameResult = game.result(performance.now());
+  if (daily) {
+    showDailyResult(r, daily);
+    return;
+  }
   const isRecord = recordResult(theme.id, level, r);
   const canNext = r.success && level < LEVEL_COUNT;
   show(`
@@ -255,6 +292,56 @@ function showResult(): void {
     if (e.key !== 'Enter' || e.repeat) return;
     e.preventDefault();
     startLevel(canNext ? level + 1 : level);
+  };
+  document.addEventListener('keydown', keyHandler);
+}
+
+function showDailyResult(r: GameResult, d: DailyLevel): void {
+  const official = recordDaily(d.date, r);
+  const mine = getDaily(d.date)!;
+  // Partage : un bouton Copier, uniquement sur ordinateur (souris + survol).
+  const canCopy = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  show(`
+    <h1 class="title ${r.success ? 'win' : 'lose'}">${r.success ? 'Réussi !' : 'Échec'}</h1>
+    <p class="badge">${official ? 'Résultat officiel du jour enregistré' : 'Entraînement : seul ton premier résultat du jour est officiel'}</p>
+    <dl class="stats">
+      <div><dt>Temps</dt><dd>${formatSeconds(r.elapsedMs)}</dd></div>
+      <div><dt>Mots</dt><dd>${r.wordsDone} / ${r.totalWords}</dd></div>
+      <div><dt>Précision</dt><dd>${r.precision} %</dd></div>
+      <div><dt>Vitesse</dt><dd>${r.wpm} MPM</dd></div>
+    </dl>
+    ${
+      canCopy
+        ? `<div class="share">
+        <p class="summary">Ton résultat officiel, à partager</p>
+        <pre id="share-text">${esc(shareText(d.date, mine))}</pre>
+        <button class="btn primary" id="copy">Copier</button>
+      </div>`
+        : ''
+    }
+    <div class="actions">
+      <button class="btn" id="retry">Rejouer en entraînement</button>
+      <button class="btn ghost" id="home">Accueil</button>
+    </div>
+    <p class="summary">Entrée : rejouer</p>`);
+  if (r.success) confetti(60, look.hue);
+  el('retry').addEventListener('click', startDaily);
+  el('home').addEventListener('click', showThemes);
+  if (canCopy) {
+    el('copy').addEventListener('click', async () => {
+      const button = el('copy');
+      try {
+        await navigator.clipboard.writeText(shareText(d.date, mine));
+        button.textContent = 'Copié ✓';
+      } catch {
+        button.textContent = 'Copie impossible';
+      }
+    });
+  }
+  keyHandler = (e) => {
+    if (e.key !== 'Enter' || e.repeat) return;
+    e.preventDefault();
+    startDaily();
   };
   document.addEventListener('keydown', keyHandler);
 }

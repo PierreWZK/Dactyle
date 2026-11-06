@@ -76,10 +76,10 @@ export function confetti(count: number, hue: number): void {
 }
 
 // Bandeau « Niveau N » qui apparaît au lancement, sans bloquer la saisie.
-export function showIntro(level: number, look: LevelLook): void {
+export function showIntro(title: string, look: LevelLook): void {
   const el = document.createElement('div');
   el.className = 'intro';
-  el.innerHTML = `<strong>Niveau ${level}</strong><span>${look.tierName}</span>`;
+  el.innerHTML = `<strong>${title}</strong><span>${look.tierName}</span>`;
   document.body.appendChild(el);
   if (reducedMotion()) {
     setTimeout(() => el.remove(), 900);
