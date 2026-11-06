@@ -2,7 +2,14 @@ import './style.css';
 import { THEMES, type Theme } from './data/themes';
 import { LEVEL_COUNT, buildLevel } from './data/levels';
 import { TypingGame, type GameResult } from './game/engine';
-import { getProgress, globalStats, isLevelUnlocked, recordResult } from './storage/save';
+import {
+  getProgress,
+  getSettings,
+  globalStats,
+  isLevelUnlocked,
+  recordResult,
+  setStrict,
+} from './storage/save';
 
 const app = document.querySelector<HTMLElement>('#app')!;
 
@@ -11,8 +18,19 @@ let level = 1;
 let game: TypingGame;
 let frame = 0;
 let justAdvanced = false;
+let strictNow = false;
+let keyHandler: ((e: KeyboardEvent) => void) | null = null;
+// Mots déjà tirés par niveau pendant cette session, pour varier d'une partie à l'autre.
+const seen = new Map<string, Set<string>>();
+
+// Les mots peuvent contenir du code HTML (ex. thème Programmation) : on l'échappe.
+function esc(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 
 function show(html: string): void {
+  if (keyHandler) document.removeEventListener('keydown', keyHandler);
+  keyHandler = null;
   app.innerHTML = html;
   // Relance l'animation d'entrée à chaque changement d'écran.
   app.classList.remove('enter');
@@ -26,6 +44,10 @@ function showThemes(): void {
   show(`
     <h1 class="title">Dactyle</h1>
     <p class="subtitle">Choisis un thème</p>
+    <label class="toggle">
+      <input type="checkbox" id="strict" ${getSettings().strict ? 'checked' : ''} />
+      <span>Mode strict : accents et majuscules obligatoires</span>
+    </label>
     <div class="cards">
       ${THEMES.map((t) => {
         const p = getProgress(t.id);
@@ -36,6 +58,9 @@ function showThemes(): void {
       }).join('')}
     </div>
     <p class="summary">Parties : ${g.played} · Réussies : ${g.won} · Meilleure vitesse : ${g.bestWpm} MPM</p>`);
+  el<HTMLInputElement>('strict').addEventListener('change', (e) => {
+    setStrict((e.target as HTMLInputElement).checked);
+  });
   app.querySelectorAll<HTMLButtonElement>('[data-theme]').forEach((btn) => {
     btn.addEventListener('click', () => {
       theme = THEMES.find((t) => t.id === btn.dataset.theme)!;
@@ -60,7 +85,7 @@ function showLevels(): void {
   show(`
     <button class="link" id="back">← Thèmes</button>
     <h1 class="title">${theme.name}</h1>
-    <p class="subtitle">Choisis un niveau · meilleur temps affiché sous chaque niveau</p>
+    <p class="subtitle">${theme.difficulty} · ${LEVEL_COUNT} niveaux · meilleur temps affiché sous chaque niveau</p>
     <div class="levels">${buttons}</div>`);
   app.querySelector('#back')!.addEventListener('click', showThemes);
   app.querySelectorAll<HTMLButtonElement>('[data-level]').forEach((btn) => {
@@ -70,8 +95,14 @@ function showLevels(): void {
 
 function startLevel(n: number): void {
   level = n;
-  const spec = buildLevel(theme, n);
-  game = new TypingGame(spec.words, spec.timeLimitMs);
+  const key = `${theme.id}:${n}`;
+  const played = seen.get(key) ?? new Set<string>();
+  const spec = buildLevel(theme, n, played);
+  // Si le tirage a dû reprendre des mots déjà vus, on repart d'une liste vide.
+  const reused = spec.words.some((w) => played.has(w));
+  seen.set(key, reused ? new Set(spec.words) : new Set([...played, ...spec.words]));
+  strictNow = getSettings().strict || theme.strict === true;
+  game = new TypingGame(spec.words, spec.timeLimitMs, strictNow);
   showGame();
   startLoop();
 }
@@ -79,7 +110,7 @@ function startLevel(n: number): void {
 function showGame(): void {
   show(`
     <header class="hud">
-      <span class="hud-label">${theme.name} · Niveau ${level}</span>
+      <span class="hud-label">${theme.name} · Niveau ${level}${strictNow ? ' · Strict' : ''}</span>
       <span class="timer" id="timer"></span>
     </header>
     <p class="progress" id="progress"></p>
@@ -108,10 +139,10 @@ function renderGame(): void {
   const letters = game.letterStates;
   el('words').innerHTML = game.words
     .map((w, i) => {
-      if (i < game.currentIndex) return `<li class="word done">${w}</li>`;
-      if (i > game.currentIndex) return `<li class="word todo">${w}</li>`;
+      if (i < game.currentIndex) return `<li class="word done">${esc(w)}</li>`;
+      if (i > game.currentIndex) return `<li class="word todo">${esc(w)}</li>`;
       const spans = [...w]
-        .map((c, k) => `<span class="ch ${letters[k]}">${c}</span>`)
+        .map((c, k) => `<span class="ch ${letters[k]}">${esc(c)}</span>`)
         .join('');
       const enter = justAdvanced ? ' enter' : '';
       return `<li class="word current${enter}">${spans}</li>`;
@@ -167,10 +198,19 @@ function showResult(): void {
       <button class="btn" id="retry">Rejouer</button>
       ${canNext ? '<button class="btn primary" id="next">Niveau suivant</button>' : ''}
       <button class="btn ghost" id="levels">Niveaux</button>
-    </div>`);
+    </div>
+    <p class="summary">Entrée : ${canNext ? 'niveau suivant' : 'rejouer'}</p>`);
   el('retry').addEventListener('click', () => startLevel(level));
   el('levels').addEventListener('click', showLevels);
   if (canNext) el('next').addEventListener('click', () => startLevel(level + 1));
+
+  // Entrée : niveau suivant après une réussite, sinon on rejoue le même niveau.
+  keyHandler = (e) => {
+    if (e.key !== 'Enter' || e.repeat) return;
+    e.preventDefault();
+    startLevel(canNext ? level + 1 : level);
+  };
+  document.addEventListener('keydown', keyHandler);
 }
 
 function formatSeconds(ms: number): string {

@@ -257,3 +257,18 @@ body {
 
 body { display: flex; flex-direction: column; }
 #app { flex: 1; width: 100%; }
+
+.word { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.toggle input { accent-color: var(--accent); width: 1.1rem; height: 1.1rem; }
+
+.levels { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }

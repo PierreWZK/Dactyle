@@ -3,7 +3,11 @@ import type { GameResult } from '../game/engine';
 
 // Sauvegarde locale versionnée. Un changement de format = nouvelle VERSION.
 const KEY = 'dactyle:save';
-const VERSION = 1;
+const VERSION = 2; // v2 : ajout des réglages (mode strict)
+
+export interface Settings {
+  strict: boolean;
+}
 
 export interface ThemeProgress {
   unlocked: number; // niveau le plus haut accessible
@@ -16,6 +20,7 @@ export interface ThemeProgress {
 interface SaveData {
   version: number;
   themes: Record<string, ThemeProgress>;
+  settings: Settings;
 }
 
 function emptyProgress(): ThemeProgress {
@@ -27,12 +32,15 @@ function load(): SaveData {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const data = JSON.parse(raw) as SaveData;
-      if (data && data.version === VERSION && typeof data.themes === 'object') return data;
+      if (data && (data.version === 1 || data.version === VERSION) && typeof data.themes === 'object') {
+        // v1 -> v2 : on garde la progression et on ajoute les réglages.
+        return { version: VERSION, themes: data.themes, settings: { strict: data.settings?.strict === true } };
+      }
     }
   } catch {
     // Sauvegarde illisible : on repart de zéro plutôt que de planter.
   }
-  return { version: VERSION, themes: {} };
+  return { version: VERSION, themes: {}, settings: { strict: false } };
 }
 
 function persist(data: SaveData): void {
@@ -44,6 +52,15 @@ function persist(data: SaveData): void {
 }
 
 let data = load();
+
+export function getSettings(): Settings {
+  return data.settings;
+}
+
+export function setStrict(strict: boolean): void {
+  data.settings.strict = strict;
+  persist(data);
+}
 
 export function getProgress(themeId: string): ThemeProgress {
   return data.themes[themeId] ?? emptyProgress();
