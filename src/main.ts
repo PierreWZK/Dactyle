@@ -10,9 +10,14 @@ let theme: Theme = THEMES[0];
 let level = 1;
 let game: TypingGame;
 let frame = 0;
+let justAdvanced = false;
 
 function show(html: string): void {
   app.innerHTML = html;
+  // Relance l'animation d'entrée à chaque changement d'écran.
+  app.classList.remove('enter');
+  void app.offsetWidth;
+  app.classList.add('enter');
 }
 
 function showThemes(): void {
@@ -86,8 +91,10 @@ function showGame(): void {
   const entry = el<HTMLInputElement>('entry');
   entry.focus();
   entry.addEventListener('input', () => {
+    const before = game.currentIndex;
     game.handleInput(entry.value, performance.now());
     entry.value = game.input;
+    justAdvanced = game.currentIndex !== before;
     renderGame();
     if (game.status === 'success' || game.status === 'failed') showResult();
   });
@@ -98,12 +105,19 @@ function renderGame(): void {
   const entry = el<HTMLInputElement>('entry');
   entry.classList.toggle('error', game.hasError);
 
+  const letters = game.letterStates;
   el('words').innerHTML = game.words
     .map((w, i) => {
-      const state = i < game.currentIndex ? 'done' : i === game.currentIndex ? 'current' : 'todo';
-      return `<li class="word ${state}">${w}</li>`;
+      if (i < game.currentIndex) return `<li class="word done">${w}</li>`;
+      if (i > game.currentIndex) return `<li class="word todo">${w}</li>`;
+      const spans = [...w]
+        .map((c, k) => `<span class="ch ${letters[k]}">${c}</span>`)
+        .join('');
+      const enter = justAdvanced ? ' enter' : '';
+      return `<li class="word current${enter}">${spans}</li>`;
     })
     .join('');
+  justAdvanced = false;
 
   el('progress').textContent = `${game.currentIndex} / ${game.words.length} mots`;
   el('feedback').textContent = game.hasError
@@ -128,7 +142,10 @@ function loop(): void {
     showResult();
     return;
   }
-  el('timer').textContent = formatSeconds(game.remainingMs(now));
+  const remaining = game.remainingMs(now);
+  const timer = el('timer');
+  timer.textContent = formatSeconds(remaining);
+  timer.classList.toggle('low', remaining < 3000);
   frame = requestAnimationFrame(loop);
 }
 

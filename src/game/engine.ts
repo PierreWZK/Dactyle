@@ -47,6 +47,14 @@ export class TypingGame {
     return this.words[this.wordIndex] ?? '';
   }
 
+  // État de chaque lettre du mot courant : juste, fausse ou à taper.
+  get letterStates(): ('ok' | 'bad' | 'todo')[] {
+    return [...this.currentWord].map((c, i) => {
+      if (i >= this.input.length) return 'todo';
+      return sameChar(c, this.input[i], this.strict) ? 'ok' : 'bad';
+    });
+  }
+
   // Vrai si la saisie en cours diverge du mot attendu.
   get hasError(): boolean {
     const word = this.currentWord;
