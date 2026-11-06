@@ -1,0 +1,116 @@
+import { describe, expect, it } from 'vitest';
+import { TypingGame } from './engine';
+
+// Tape un texte caractère par caractère, 100 ms entre chaque frappe.
+function typeText(game: TypingGame, text: string, start = 0): number {
+  let t = start;
+  let value = game.input;
+  for (const ch of text) {
+    value += ch;
+    game.handleInput(value, t);
+    value = game.input; // le moteur vide le champ quand un mot est validé
+    t += 100;
+  }
+  return t;
+}
+
+describe('TypingGame', () => {
+  it('réussit un mot recopié dans le temps', () => {
+    const g = new TypingGame(['Chat'], 5000);
+    typeText(g, 'Chat');
+    const r = g.result(400);
+    expect(g.status).toBe('success');
+    expect(r).toMatchObject({ success: true, wordsDone: 1, totalWords: 1, precision: 100 });
+  });
+
+  it('démarre le chrono à la première frappe seulement', () => {
+    const g = new TypingGame(['Chat'], 5000);
+    expect(g.remainingMs(99999)).toBe(5000);
+    expect(g.tick(99999)).toBe('ready');
+    g.handleInput('C', 1000);
+    expect(g.remainingMs(3000)).toBe(3000);
+  });
+
+  it('échoue quand le temps est écoulé et fige le temps', () => {
+    const g = new TypingGame(['Chat'], 5000);
+    g.handleInput('C', 0);
+    expect(g.tick(4999)).toBe('playing');
+    expect(g.tick(5000)).toBe('failed');
+    expect(g.result(60000).elapsedMs).toBe(5000);
+    g.handleInput('Ch', 6000);
+    expect(g.input).toBe('C');
+  });
+
+  it('une faute baisse la précision sans faire échouer', () => {
+    const g = new TypingGame(['Chat'], 5000);
+    g.handleInput('x', 0);
+    expect(g.hasError).toBe(true);
+    g.handleInput('', 100);
+    typeText(g, 'Chat', 200);
+    const r = g.result(700);
+    expect(g.status).toBe('success');
+    expect(r.precision).toBe(80); // 4 justes sur 5 frappes
+  });
+
+  it('ignore accents et majuscules par défaut', () => {
+    const g = new TypingGame(['Éléphant'], 5000);
+    typeText(g, 'elephant');
+    expect(g.status).toBe('success');
+  });
+
+  it('exige accents et majuscules en mode strict', () => {
+    const g = new TypingGame(['Éléphant'], 5000, true);
+    typeText(g, 'elephant');
+    expect(g.status).toBe('playing');
+    expect(g.hasError).toBe(true);
+  });
+
+  it('accepte les accents exacts en mode strict', () => {
+    const g = new TypingGame(['Éléphant'], 5000, true);
+    typeText(g, 'Éléphant');
+    expect(g.status).toBe('success');
+  });
+
+  it('gère les tirets et les majuscules internes', () => {
+    const g = new TypingGame(['Orang-outan', 'useEffect'], 20000, true);
+    typeText(g, 'Orang-outan');
+    expect(g.currentWord).toBe('useEffect');
+    typeText(g, 'useeffect', 2000);
+    expect(g.status).toBe('playing');
+    g.handleInput('', 3000);
+    typeText(g, 'useEffect', 3100);
+    expect(g.status).toBe('success');
+  });
+
+  it('demande les mots dans l’ordre', () => {
+    const g = new TypingGame(['Chat', 'Chien'], 20000);
+    g.handleInput('Chien', 0);
+    expect(g.currentIndex).toBe(0);
+    g.handleInput('', 100);
+    typeText(g, 'Chat', 200);
+    expect(g.currentIndex).toBe(1);
+    expect(g.input).toBe('');
+    typeText(g, 'Chien', 1000);
+    expect(g.status).toBe('success');
+    expect(g.result(2000).wordsDone).toBe(2);
+  });
+
+  it('ignore la saisie une fois le niveau réussi', () => {
+    const g = new TypingGame(['Chat'], 5000);
+    typeText(g, 'Chatt');
+    expect(g.currentIndex).toBe(1);
+    expect(g.status).toBe('success');
+  });
+
+  it('indique l’état de chaque lettre', () => {
+    const g = new TypingGame(['Chat'], 5000);
+    g.handleInput('Cx', 0);
+    expect(g.letterStates).toEqual(['ok', 'bad', 'todo', 'todo']);
+  });
+
+  it('calcule la vitesse en mots par minute', () => {
+    const g = new TypingGame(['abcde'], 60000);
+    typeText(g, 'abcde', 0); // 5 caractères en 400 ms
+    expect(g.result(400).wpm).toBe(150); // 1 mot en 0,4 s
+  });
+});
