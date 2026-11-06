@@ -55,7 +55,7 @@ body {
   font-size: 0.9rem;
 }
 
-.badge { color: var(--accent); font-weight: 600; }
+.badge { color: color-mix(in srgb, var(--accent) 65%, #000); font-weight: 600; }
 
 .card,
 .level,
@@ -348,4 +348,29 @@ body::before {
 
 @keyframes glow {
   50% { filter: brightness(1.25); }
+}
+
+.card.daily {
+  border: 2px solid hsl(45 90% 55%);
+  background: linear-gradient(135deg, #fffaf0, var(--card));
+}
+
+.card.daily strong { font-size: 1.2rem; }
+
+.share {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.share pre {
+  margin: 0;
+  padding: 1rem;
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  font: inherit;
+  white-space: pre-wrap;
 }

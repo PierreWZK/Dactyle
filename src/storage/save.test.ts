@@ -93,6 +93,22 @@ describe('save', () => {
     expect(s.isLevelUnlocked('animaux', 2)).toBe(false);
   });
 
+  it('ne garde que le premier résultat officiel du jour', async () => {
+    const s = await freshSave();
+    expect(s.recordDaily('2026-11-06', win(30000))).toBe(true);
+    expect(s.recordDaily('2026-11-06', loss)).toBe(false);
+    expect(s.getDaily('2026-11-06')?.elapsedMs).toBe(30000);
+    expect(s.getDaily('2026-11-07')).toBeUndefined();
+  });
+
+  it('persiste le résultat du jour et garde les 60 dernières dates', async () => {
+    let s = await freshSave();
+    for (let d = 1; d <= 70; d++) s.recordDaily(`2027-01-${String(d).padStart(3, '0')}`, win(1000));
+    s = await freshSave();
+    expect(s.getDaily('2027-01-070')).toBeDefined();
+    expect(s.getDaily('2027-01-001')).toBeUndefined();
+  });
+
   it('ignore une sauvegarde d’une autre version', async () => {
     stubStorage(JSON.stringify({ version: 99, themes: { animaux: { unlocked: 10 } } }));
     const s = await freshSave();

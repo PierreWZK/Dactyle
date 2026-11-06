@@ -21,6 +21,7 @@ interface SaveData {
   version: number;
   themes: Record<string, ThemeProgress>;
   settings: Settings;
+  daily: Record<string, GameResult>; // résultat officiel par date (AAAA-MM-JJ)
 }
 
 function emptyProgress(): ThemeProgress {
@@ -34,13 +35,18 @@ function load(): SaveData {
       const data = JSON.parse(raw) as SaveData;
       if (data && (data.version === 1 || data.version === VERSION) && typeof data.themes === 'object') {
         // v1 -> v2 : on garde la progression et on ajoute les réglages.
-        return { version: VERSION, themes: data.themes, settings: { strict: data.settings?.strict === true } };
+        return {
+          version: VERSION,
+          themes: data.themes,
+          settings: { strict: data.settings?.strict === true },
+          daily: data.daily ?? {},
+        };
       }
     }
   } catch {
     // Sauvegarde illisible : on repart de zéro plutôt que de planter.
   }
-  return { version: VERSION, themes: {}, settings: { strict: false } };
+  return { version: VERSION, themes: {}, settings: { strict: false }, daily: {} };
 }
 
 function persist(data: SaveData): void {
@@ -52,6 +58,20 @@ function persist(data: SaveData): void {
 }
 
 let data = load();
+
+export function getDaily(date: string): GameResult | undefined {
+  return data.daily[date];
+}
+
+// Seul le premier résultat d'une date est officiel. Retourne true s'il vient d'être enregistré.
+export function recordDaily(date: string, result: GameResult): boolean {
+  if (data.daily[date]) return false;
+  data.daily[date] = result;
+  // On ne garde que les 60 dernières dates.
+  for (const old of Object.keys(data.daily).sort().slice(0, -60)) delete data.daily[old];
+  persist(data);
+  return true;
+}
 
 export function getSettings(): Settings {
   return data.settings;
