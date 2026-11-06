@@ -155,7 +155,7 @@ function startLevel(n: number): void {
   const reused = spec.words.some((w) => played.has(w));
   seen.set(key, reused ? new Set(spec.words) : new Set([...played, ...spec.words]));
   strictNow = getSettings().strict || theme.strict === true;
-  game = new TypingGame(spec.words, spec.timeLimitMs, strictNow);
+  game = new TypingGame(spec.words, spec.timeLimitMs, strictNow, theme.looseSpaces === true);
   look = levelLook(n);
   applyLook(look);
   combo = 0;
@@ -194,12 +194,13 @@ function showGame(): void {
   entry.focus();
   entry.addEventListener('input', () => {
     const before = game.currentIndex;
-    const grew = entry.value.length > game.input.length;
+    const previous = game.input;
     game.handleInput(entry.value, performance.now());
     entry.value = game.input;
     justAdvanced = game.currentIndex !== before;
     renderGame();
-    if (grew) feedback(entry, game.currentIndex !== before);
+    // Une frappe ignorée (espace en début de mot) ne déclenche ni combo ni effet.
+    if (justAdvanced || game.input.length > previous.length) feedback(entry, justAdvanced);
     if (game.status === 'success' || game.status === 'failed') showResult();
   });
   renderGame();

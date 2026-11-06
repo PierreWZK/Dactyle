@@ -255,3 +255,30 @@ test.describe('niveau du jour', () => {
     await expect(page.locator('.hud-label')).toHaveText('Niveau du jour');
   });
 });
+
+test('un espace en début de mot est ignoré, sans faute ni effet sur la précision', async ({ page }) => {
+  await page.goto('/jouer');
+  await openLevel(page, 'Animaux', 1);
+  const entry = page.locator('#entry');
+  await entry.press('Space');
+  await expect(entry).toHaveValue('');
+  await expect(entry).not.toHaveClass(/error/);
+  await expect(page.locator('#timer')).toHaveText(/^\d+\.\d s$/);
+  const first = (await page.locator('#words li').first().textContent())!.trim();
+  await entry.pressSequentially(' ' + first);
+  await expect(page.locator('.title')).toHaveText('Réussi !');
+  await expect(page.locator('.stats')).toContainText('100 %');
+});
+
+test('Programmation : les espaces autour des symboles sont facultatifs', async ({ page }) => {
+  await page.addInitScript((save) => localStorage.setItem('dactyle:save', save), allUnlocked);
+  await page.goto('/jouer');
+  await openLevel(page, 'Programmation', 50);
+  const lines = (await page.locator('#words li').allTextContents()).map((l) => l.trim());
+  // Même ligne tapée sans les espaces facultatifs (ceux voisins d'un symbole).
+  const compact = (line: string) =>
+    [...line].filter((c, i, a) => c !== ' ' || (/[\p{L}\p{N}_$]/u.test(a[i - 1] ?? '') && /[\p{L}\p{N}_$]/u.test(a[i + 1] ?? ''))).join('');
+  for (const line of lines) await page.locator('#entry').pressSequentially(compact(line));
+  await expect(page.locator('.title')).toHaveText('Réussi !');
+  await expect(page.locator('.stats')).toContainText('100 %');
+});
