@@ -6,6 +6,7 @@ export const code: Theme = {
   name: 'Programmation',
   difficulty: 'Expert',
   strict: true,
+  looseSpaces: true,
   maxWords: 3,
   words: [
     'i++;', 'n--;', 'x += 2;', 'break;', 'return x;', 'else {', 'if (a) {', 'let a = 1;', 'var n = 0;',

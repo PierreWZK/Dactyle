@@ -22,6 +22,21 @@ function baseChar(c: string): string {
   return c.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 }
 
+const isWordChar = (c: string | undefined) => c !== undefined && /[\p{L}\p{N}_$]/u.test(c);
+
+// Espaces facultatifs (code) : un espace voisin d'un symbole peut être omis (`x = y` vaut `x=y`),
+// alors qu'un espace entre deux mots est obligatoire (`const x`).
+function keepMask(text: string): boolean[] {
+  const chars = [...text];
+  return chars.map((c, i) => c !== ' ' || (isWordChar(chars[i - 1]) && isWordChar(chars[i + 1])));
+}
+
+function squash(text: string): string {
+  const collapsed = text.replace(/ {2,}/g, ' ');
+  const mask = keepMask(collapsed);
+  return [...collapsed].filter((_, i) => mask[i]).join('');
+}
+
 export class TypingGame {
   status: Status = 'ready';
   input = '';
@@ -37,6 +52,7 @@ export class TypingGame {
     readonly words: string[],
     readonly timeLimitMs: number,
     readonly strict = false,
+    readonly looseSpaces = false,
   ) {}
 
   get currentIndex(): number {
@@ -49,34 +65,51 @@ export class TypingGame {
 
   // État de chaque lettre du mot courant : juste, fausse ou à taper.
   get letterStates(): ('ok' | 'bad' | 'todo')[] {
-    return [...this.currentWord].map((c, i) => {
-      if (i >= this.input.length) return 'todo';
-      return sameChar(c, this.input[i], this.strict) ? 'ok' : 'bad';
+    const chars = [...this.currentWord];
+    const expected = [...this.norm(this.currentWord)];
+    const typed = [...this.norm(this.input)];
+    const mask = this.looseSpaces ? keepMask(this.currentWord) : chars.map(() => true);
+
+    const states: ('ok' | 'bad' | 'todo')[] = [];
+    let k = 0;
+    chars.forEach((_, i) => {
+      if (!mask[i]) {
+        states.push('todo');
+        return;
+      }
+      states.push(k >= typed.length ? 'todo' : sameChar(expected[k], typed[k], this.strict) ? 'ok' : 'bad');
+      k++;
     });
+    // Un espace facultatif prend l'état de la lettre qui le suit.
+    for (let i = chars.length - 1; i >= 0; i--) {
+      if (!mask[i]) states[i] = states[i + 1] ?? (typed.length >= expected.length ? 'ok' : 'todo');
+    }
+    return states;
   }
 
   // Vrai si la saisie en cours diverge du mot attendu.
   get hasError(): boolean {
-    const word = this.currentWord;
-    if (this.input.length > word.length) return true;
-    return [...this.input].some((c, i) => !sameChar(word[i], c, this.strict));
+    const expected = this.norm(this.currentWord);
+    const typed = this.norm(this.input);
+    if (typed.length > expected.length) return true;
+    return [...typed].some((c, i) => !sameChar(expected[i], c, this.strict));
   }
 
   // Appelé à chaque modification du champ de saisie.
-  handleInput(value: string, now: number): void {
+  handleInput(rawValue: string, now: number): void {
     if (this.status !== 'ready' && this.status !== 'playing') return;
+
+    const word = this.currentWord;
+    // Un espace en début de mot est ignoré : ni faute, ni frappe comptée, ni départ du chrono.
+    const value = word.startsWith(' ') ? rawValue : rawValue.replace(/^ +/, '');
+    if (this.status === 'ready' && value === '') return;
+    if (value === this.input) return;
+
     if (this.status === 'ready') {
       this.status = 'playing';
       this.startedAt = now;
     }
-
-    const word = this.currentWord;
-    if (value.length > this.input.length) {
-      // Une frappe ajoute un caractère en fin de champ : on le juge.
-      const pos = value.length - 1;
-      this.keystrokes++;
-      if (!sameChar(word[pos], value[pos], this.strict)) this.errors++;
-    }
+    if (value.length > this.input.length) this.judgeKeystroke(word, this.input, value);
     this.input = value;
 
     if (this.isWordMatched(word, value)) {
@@ -116,6 +149,31 @@ export class TypingGame {
     };
   }
 
+  private norm(text: string): string {
+    return this.looseSpaces ? squash(text) : text;
+  }
+
+  // Une frappe ajoute un caractère en fin de champ : on la juge.
+  private judgeKeystroke(word: string, before: string, after: string): void {
+    if (!this.looseSpaces) {
+      const pos = after.length - 1;
+      this.keystrokes++;
+      if (!sameChar(word[pos], after[pos], this.strict)) this.errors++;
+      return;
+    }
+    const expected = squash(word);
+    const typed = squash(after);
+    const from = squash(before).length;
+    if (typed.length === from) return; // espace facultatif en attente : ni juste ni faux
+    this.keystrokes++;
+    for (let j = from; j < typed.length; j++) {
+      if (!sameChar(expected[j], typed[j], this.strict)) {
+        this.errors++;
+        break;
+      }
+    }
+  }
+
   private elapsedMs(now: number): number {
     if (this.status === 'ready') return 0;
     const end = this.status === 'playing' ? now : this.endedAt;
@@ -123,8 +181,10 @@ export class TypingGame {
   }
 
   private isWordMatched(word: string, value: string): boolean {
-    if (value.length !== word.length) return false;
-    return [...word].every((c, i) => sameChar(c, value[i], this.strict));
+    const expected = this.norm(word);
+    const typed = this.norm(value);
+    if (typed.length !== expected.length) return false;
+    return [...expected].every((c, i) => sameChar(c, typed[i], this.strict));
   }
 
   private finish(status: 'success' | 'failed', at: number): void {
