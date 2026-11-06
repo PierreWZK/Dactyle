@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// Les tests E2E tournent sur le build de production (vite preview).
+// Les tests E2E tournent sur le build de production, servi par le serveur Node.
 export default defineConfig({
   testDir: 'e2e',
   fullyParallel: true,
@@ -11,9 +11,11 @@ export default defineConfig({
     launchOptions: { executablePath: process.env.PW_CHROMIUM_PATH || undefined },
   },
   webServer: {
-    command: 'npm run build && npm run preview -- --port 4173 --strictPort',
-    url: 'http://localhost:4173',
-    reuseExistingServer: true,
+    // Serveur complet (site + API, base PGlite en mémoire).
+    command: 'npm run build && npm start',
+    env: { PORT: '4173' },
+    url: 'http://localhost:4173/api/health',
+    reuseExistingServer: false,
     timeout: 120_000,
   },
   projects: [

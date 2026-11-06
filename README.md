@@ -20,10 +20,10 @@ Une faute de frappe n'échoue pas le niveau : elle baisse ta **précision**. Un 
 
 ## Technologies
 
-- **TypeScript** + **Vite** (application statique, aucun backend)
-- Interface en HTML/CSS, sans framework
+- **TypeScript** + **Vite** pour le jeu (HTML/CSS, sans framework)
+- **Hono** (serveur Node) + **PostgreSQL** pour le classement global ; **PGlite** (Postgres en mémoire) en local et en test
 - Tests : Vitest (moteur de jeu) et Playwright (parcours complet)
-- Déploiement : image Docker (Nginx) sur **Coolify**
+- Déploiement : image Docker (Node, site et API sur le même port) sur **Coolify**
 
 ## Installation
 
@@ -35,25 +35,34 @@ npm install
 
 ## Configuration
 
-Aucune variable d'environnement n'est nécessaire.
+| Variable | Rôle | Défaut |
+|---|---|---|
+| `PORT` | Port du serveur | `3000` |
+| `DATABASE_URL` | Connexion PostgreSQL du classement | absente : base PGlite en mémoire (scores perdus à l'arrêt) |
 
 ## Lancement
 
 ```bash
-npm run dev        # http://localhost:5173
-npm run build      # build de production dans dist/
-npm run preview    # sert le build de production
+npm run dev        # jeu seul sur http://localhost:5173 (classement indisponible)
+npm run build      # jeu dans dist/, serveur dans server-dist/
+npm start          # sert le jeu et l'API (http://localhost:3000)
 npm test           # tests unitaires (Vitest)
 npm run test:e2e   # tests E2E (Playwright, bureau + mobile)
 ```
 
 > Tests E2E : ils tournent sur le build de production. Pour réutiliser un Chromium déjà installé, définir `PW_CHROMIUM_PATH`.
 
+## Classement global
+
+Pseudo libre, sans compte : un pseudo est réservé avec un jeton secret gardé dans le navigateur. Deux classements : le **niveau du jour** (résultat officiel, un par joueur et par jour) et le **meilleur temps par thème et par niveau**. Le serveur refuse les résultats invraisemblables (plus de 300 mots par minute, hors limite de temps) et limite le débit ; un joueur motivé peut tout de même tricher, il n'y a pas de comptes.
+
+API : `POST /api/players`, `POST /api/scores/daily`, `POST /api/scores/level`, `GET /api/leaderboard/daily?date=`, `GET /api/leaderboard/level?theme=&level=`, `GET /api/health`.
+
 ## Informations pour le développement
 
 - Un thème = un fichier dans `src/data/themes/`, à ajouter à `src/data/themes/index.ts`. Aucune modification du moteur.
 - Les paramètres de progression (nombre de mots, longueur, temps) se règlent dans `src/data/levels.ts`.
-- Le moteur (`src/game/`) ne touche pas au DOM : il est testable seul.
+- Le moteur (`src/game/`) ne touche pas au DOM : il est testable seul. Le serveur (`server/`) réutilise ses règles (niveau du jour, temps limites).
 - Le chronomètre s'appuie sur `performance.now()`, pas sur le nombre d'affichages.
 - Workflow Git : branche par défaut `master`, développement sur des branches de fonctionnalités, Pull Requests relues avant fusion.
 
