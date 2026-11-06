@@ -246,3 +246,14 @@ body {
 .btn { padding: 0.8rem 1.3rem; font-weight: 600; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .btn.ghost { background: transparent; }
+
+.site-footer {
+  text-align: center;
+  padding: 1.5rem 1rem 2rem;
+  font-size: 0.85rem;
+}
+
+.site-footer a { color: var(--muted); }
+
+body { display: flex; flex-direction: column; }
+#app { flex: 1; width: 100%; }

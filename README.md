@@ -1,6 +1,6 @@
 # Dactyle · Le jeu de rapidité de frappe
 
-> Jour 24 du défi **30 jours, 30 projets** · TypeScript · Vite · ⏳ **En cours de développement**
+> Jour 24 du défi **30 jours, 30 projets** · TypeScript · Vite · ✅ **Jouable** (déploiement en attente)
 
 Un mot s'affiche, tu le recopies, le chrono tourne. Chaque thème (animaux, automobile, code) propose des niveaux de plus en plus longs, avec de plus en plus de mots à recopier. Bats ton meilleur temps et débloque la suite.
 
@@ -43,9 +43,11 @@ Aucune variable d'environnement n'est nécessaire.
 npm run dev        # http://localhost:5173
 npm run build      # build de production dans dist/
 npm run preview    # sert le build de production
+npm test           # tests unitaires (Vitest)
+npm run test:e2e   # tests E2E (Playwright, bureau + mobile)
 ```
 
-> Les tests automatisés arrivent à l'étape 5 de la [roadmap](CAHIER-DES-CHARGES.md#9-roadmap).
+> Tests E2E : ils tournent sur le build de production. Pour réutiliser un Chromium déjà installé, définir `PW_CHROMIUM_PATH`.
 
 ## Informations pour le développement
 
@@ -57,4 +59,4 @@ npm run preview    # sert le build de production
 
 ## Mise en ligne
 
-Prévue sur Coolify : **https://dactyle.projectp.fr**.
+Image Docker (Nginx) prête : `Dockerfile` + `nginx.conf`. Déploiement prévu sur Coolify : **https://dactyle.projectp.fr**.
