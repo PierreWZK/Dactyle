@@ -185,3 +185,27 @@ test('performance : chargement rapide et saisie fluide', async ({ page }) => {
   await expect(page.locator('.title')).toHaveText('Réussi !');
   expect(Date.now() - start).toBeLessThan(3000);
 });
+
+test('effets de niveau : bandeau d’intro, palier et combo', async ({ page }) => {
+  await page.addInitScript((save) => localStorage.setItem('dactyle:save', save), allUnlocked);
+  await page.goto('/');
+  await openLevel(page, 'Animaux', 1);
+  await expect(page.locator('.intro')).toContainText('Niveau 1');
+  await expect(page.locator('.intro')).toHaveCount(0, { timeout: 3000 });
+  expect(await page.evaluate(() => document.documentElement.dataset.tier)).toBe('0');
+
+  await page.goto('/');
+  await openLevel(page, 'Animaux', 41);
+  expect(await page.evaluate(() => document.documentElement.dataset.tier)).toBe('4');
+  const first = (await page.locator('#words li').first().textContent())!.trim();
+  await page.locator('#entry').pressSequentially(first.slice(0, 6));
+  await expect(page.locator('#combo')).toHaveText('×6');
+});
+
+test('le thème visuel est réinitialisé sur les menus', async ({ page }) => {
+  await page.addInitScript((save) => localStorage.setItem('dactyle:save', save), allUnlocked);
+  await page.goto('/');
+  await openLevel(page, 'Animaux', 41);
+  await page.goto('/');
+  expect(await page.evaluate(() => document.documentElement.dataset.tier)).toBeUndefined();
+});
