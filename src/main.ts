@@ -1,16 +1,31 @@
 import './style.css';
+import './board.css';
 import { THEMES, type Theme } from './data/themes';
 import { LEVEL_COUNT, buildLevel } from './data/levels';
 import { TypingGame, type GameResult } from './game/engine';
 import { buildDaily, shareText, todayKey, type DailyLevel } from './game/daily';
 import {
+  fetchDaily,
+  fetchLevel,
+  newToken,
+  registerPlayer,
+  sendDaily,
+  sendLevel,
+  type DailyEntry,
+  type LevelEntry,
+} from './api/client';
+import {
   getDaily,
+  getIdentity,
   getProgress,
   getSettings,
   globalStats,
+  isDailySent,
   isLevelUnlocked,
+  markDailySent,
   recordDaily,
   recordResult,
+  setIdentity,
   setStrict,
 } from './storage/save';
 import {
@@ -62,6 +77,7 @@ function showThemes(): void {
   const g = globalStats();
   show(`
     <h1 class="title">Dactyle</h1>
+    <button class="link" id="board">Classement</button>
     ${dailyCard()}
     <p class="subtitle">Ou choisis un thème</p>
     <label class="toggle">
@@ -79,6 +95,7 @@ function showThemes(): void {
     </div>
     <p class="summary">Parties : ${g.played} · Réussies : ${g.won} · Meilleure vitesse : ${g.bestWpm} MPM</p>`);
   el('daily').addEventListener('click', startDaily);
+  el('board').addEventListener('click', () => showLeaderboard());
   el<HTMLInputElement>('strict').addEventListener('change', (e) => {
     setStrict((e.target as HTMLInputElement).checked);
   });
@@ -265,6 +282,8 @@ function showResult(): void {
     return;
   }
   const isRecord = recordResult(theme.id, level, r);
+  const me = getIdentity();
+  if (r.success && isRecord && me) sendLevel(me, theme.id, level, r).catch(() => {});
   const canNext = r.success && level < LEVEL_COUNT;
   show(`
     <h1 class="title ${r.success ? 'win' : 'lose'}">${r.success ? 'Réussi !' : 'Échec'}</h1>
@@ -310,6 +329,7 @@ function showDailyResult(r: GameResult, d: DailyLevel): void {
       <div><dt>Précision</dt><dd>${r.precision} %</dd></div>
       <div><dt>Vitesse</dt><dd>${r.wpm} MPM</dd></div>
     </dl>
+    <div id="rank" class="rank"></div>
     ${
       canCopy
         ? `<div class="share">
@@ -325,6 +345,7 @@ function showDailyResult(r: GameResult, d: DailyLevel): void {
     </div>
     <p class="summary">Entrée : rejouer</p>`);
   if (r.success) confetti(60, look.hue);
+  void syncDaily(d, mine);
   el('retry').addEventListener('click', startDaily);
   el('home').addEventListener('click', showThemes);
   if (canCopy) {
@@ -344,6 +365,153 @@ function showDailyResult(r: GameResult, d: DailyLevel): void {
     startDaily();
   };
   document.addEventListener('keydown', keyHandler);
+}
+
+// --- Classement global -------------------------------------------------------
+
+function pseudoForm(): string {
+  return `<form class="pseudo-form" id="pseudo-form">
+    <input id="pseudo" class="pseudo" maxlength="16" minlength="3" required autocomplete="off"
+      placeholder="Ton pseudo (3 à 16 caractères)" aria-label="Pseudo" />
+    <button class="btn primary" type="submit">Choisir</button>
+    <p class="form-error" id="pseudo-error"></p>
+  </form>`;
+}
+
+// Réserve le pseudo sur le serveur avec un jeton secret gardé dans ce navigateur.
+function bindPseudoForm(container: HTMLElement, onDone: () => void): void {
+  container.querySelector<HTMLFormElement>('#pseudo-form')!.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const input = container.querySelector<HTMLInputElement>('#pseudo')!;
+    const error = container.querySelector<HTMLElement>('#pseudo-error')!;
+    const token = newToken();
+    try {
+      const { pseudo } = await registerPlayer({ pseudo: input.value, token });
+      setIdentity({ pseudo, token });
+      onDone();
+    } catch (err) {
+      error.textContent = err instanceof Error ? err.message : 'Erreur.';
+    }
+  });
+}
+
+// Envoie le résultat officiel du jour au classement (ou demande un pseudo).
+async function syncDaily(d: DailyLevel, mine: GameResult): Promise<void> {
+  const box = document.getElementById('rank');
+  if (!box) return; // le joueur a quitté l'écran entre-temps
+  const me = getIdentity();
+  if (isDailySent(d.date)) {
+    box.innerHTML = '<p class="summary">Résultat au classement ✓ <button class="link" id="see-board">Voir le classement</button></p>';
+    box.querySelector('#see-board')!.addEventListener('click', () => showLeaderboard());
+    return;
+  }
+  if (!me) {
+    box.innerHTML = `<p class="summary">Choisis un pseudo pour entrer au classement du jour.</p>${pseudoForm()}`;
+    bindPseudoForm(box, () => void syncDaily(d, mine));
+    return;
+  }
+  box.innerHTML = '<p class="summary">Envoi au classement…</p>';
+  try {
+    await sendDaily(me, d.date, mine);
+    markDailySent(d.date);
+    await syncDaily(d, mine);
+  } catch (err) {
+    const target = document.getElementById('rank');
+    if (!target) return;
+    target.innerHTML = `<p class="form-error">${esc(err instanceof Error ? err.message : 'Erreur.')}</p>
+      <button class="btn" id="resend">Réessayer</button>`;
+    target.querySelector('#resend')!.addEventListener('click', () => void syncDaily(d, mine));
+  }
+}
+
+let boardTab: 'daily' | 'levels' = 'daily';
+let boardTheme = THEMES[0].id;
+let boardLevel = 1;
+
+function boardTable(head: string[], rows: string[][], pseudos: string[]): string {
+  if (rows.length === 0) return '<p class="summary">Personne n’est encore classé ici. À toi de jouer !</p>';
+  const mine = getIdentity()?.pseudo.toLowerCase();
+  const body = rows
+    .map((row, i) => {
+      const cells = row.map((cell) => `<td>${cell}</td>`).join('');
+      return `<tr class="${pseudos[i].toLowerCase() === mine ? 'mine' : ''}"><td>${i + 1}</td><td>${esc(pseudos[i])}</td>${cells}</tr>`;
+    })
+    .join('');
+  const header = head.map((h) => `<th>${h}</th>`).join('');
+  return `<table class="board"><thead><tr><th>#</th>${header}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+function showLeaderboard(tab: 'daily' | 'levels' = boardTab): void {
+  stopLoop();
+  resetLook();
+  boardTab = tab;
+  const me = getIdentity();
+  const themeOptions = THEMES.map((t) => `<option value="${t.id}" ${t.id === boardTheme ? 'selected' : ''}>${t.name}</option>`).join('');
+  const levelOptions = Array.from({ length: LEVEL_COUNT }, (_, i) => i + 1)
+    .map((n) => `<option value="${n}" ${n === boardLevel ? 'selected' : ''}>Niveau ${n}</option>`)
+    .join('');
+  const filters =
+    tab === 'levels'
+      ? `<div class="pickers"><select id="lb-theme" aria-label="Thème">${themeOptions}</select><select id="lb-level" aria-label="Niveau">${levelOptions}</select></div>`
+      : `<p class="summary">Résultats du ${todayKey()}</p>`;
+  show(`
+    <button class="link" id="back">← Accueil</button>
+    <h1 class="title">Classement</h1>
+    <p class="subtitle">${me ? `Tu joues sous le pseudo <strong>${esc(me.pseudo)}</strong>` : 'Choisis un pseudo pour apparaître au classement'}</p>
+    ${me ? '' : pseudoForm()}
+    <div class="tabs">
+      <button class="tab ${tab === 'daily' ? 'active' : ''}" data-tab="daily">Niveau du jour</button>
+      <button class="tab ${tab === 'levels' ? 'active' : ''}" data-tab="levels">Meilleurs temps</button>
+    </div>
+    ${filters}
+    <div id="board-body"><p class="summary">Chargement…</p></div>`);
+
+  el('back').addEventListener('click', showThemes);
+  if (!me) bindPseudoForm(app, () => showLeaderboard());
+  app.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((btn) => {
+    btn.addEventListener('click', () => showLeaderboard(btn.dataset.tab as 'daily' | 'levels'));
+  });
+  if (tab === 'levels') {
+    el<HTMLSelectElement>('lb-theme').addEventListener('change', (e) => {
+      boardTheme = (e.target as HTMLSelectElement).value;
+      showLeaderboard('levels');
+    });
+    el<HTMLSelectElement>('lb-level').addEventListener('change', (e) => {
+      boardLevel = Number((e.target as HTMLSelectElement).value);
+      showLeaderboard('levels');
+    });
+  }
+  void loadBoard(tab);
+}
+
+async function loadBoard(tab: 'daily' | 'levels'): Promise<void> {
+  let html: string;
+  try {
+    if (tab === 'daily') {
+      const { entries } = await fetchDaily(todayKey());
+      html = boardTable(
+        ['Pseudo', 'Résultat', 'Précision', 'Vitesse'],
+        entries.map((e: DailyEntry) => [
+          e.success ? formatSeconds(e.elapsedMs) : `Échec · ${e.wordsDone}/${e.totalWords} mots`,
+          `${e.precision} %`,
+          `${e.wpm} MPM`,
+        ]),
+        entries.map((e) => e.pseudo),
+      );
+    } else {
+      const { entries } = await fetchLevel(boardTheme, boardLevel);
+      html = boardTable(
+        ['Pseudo', 'Temps', 'Précision', 'Vitesse'],
+        entries.map((e: LevelEntry) => [formatSeconds(e.elapsedMs), `${e.precision} %`, `${e.wpm} MPM`]),
+        entries.map((e) => e.pseudo),
+      );
+    }
+  } catch (err) {
+    html = `<p class="form-error">${esc(err instanceof Error ? err.message : 'Erreur.')}</p>`;
+  }
+  const body = document.getElementById('board-body');
+  // On ignore la réponse si le joueur a changé d'onglet pendant le chargement.
+  if (body && boardTab === tab) body.innerHTML = html;
 }
 
 function formatSeconds(ms: number): string {

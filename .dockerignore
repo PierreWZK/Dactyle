@@ -5,3 +5,4 @@ test-results
 playwright-report
 .git
 .env*
+server-dist

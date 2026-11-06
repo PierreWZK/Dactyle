@@ -5,15 +5,26 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && npm run build:server",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "build:server": "esbuild server/index.ts --bundle --platform=node --format=cjs --outfile=server-dist/index.cjs --external:pg-native --external:@electric-sql/pglite",
+    "start": "node server-dist/index.cjs"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.15",
     "@playwright/test": "^1.65.0",
+    "@types/node": "^26.6.6",
+    "@types/pg": "^8.23.1",
+    "esbuild": "^0.28.2",
     "typescript": "^7.0.2",
     "vite": "^8.3.6",
     "vitest": "^5.1.0"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.6",
+    "hono": "^4.13.16",
+    "pg": "^8.23.1"
   }
 }

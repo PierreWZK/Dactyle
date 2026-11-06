@@ -1,0 +1,36 @@
+/* Classement */
+.tabs { display: flex; gap: 0.5rem; }
+
+.tab {
+  font: inherit;
+  cursor: pointer;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--muted);
+}
+
+.tab.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+.pickers { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+.pickers select,
+.pseudo {
+  font: inherit;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--ink);
+}
+
+.pseudo-form { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.pseudo { flex: 1 1 14rem; font-size: 1rem; }
+.form-error { margin: 0; color: var(--bad); width: 100%; }
+.rank { display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start; }
+
+.board { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.board th { text-align: left; color: var(--muted); font-weight: 500; font-size: 0.85rem; padding: 0.4rem 0.5rem; }
+.board td { padding: 0.55rem 0.5rem; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.board tr.mine td { background: color-mix(in srgb, var(--accent) 12%, transparent); font-weight: 600; }

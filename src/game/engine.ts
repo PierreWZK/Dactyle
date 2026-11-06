@@ -103,7 +103,7 @@ export class TypingGame {
   }
 
   result(now: number): GameResult {
-    const elapsedMs = this.elapsedMs(now);
+    const elapsedMs = Math.round(this.elapsedMs(now)); // entier : le serveur refuse les décimales
     const total = this.keystrokes;
     const minutes = elapsedMs / 60000;
     return {

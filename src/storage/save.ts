@@ -9,6 +9,12 @@ export interface Settings {
   strict: boolean;
 }
 
+// Identité du classement : le jeton secret reste dans ce navigateur.
+export interface Identity {
+  pseudo: string;
+  token: string;
+}
+
 export interface ThemeProgress {
   unlocked: number; // niveau le plus haut accessible
   bestMs: Record<number, number>; // meilleur temps par niveau réussi
@@ -22,6 +28,8 @@ interface SaveData {
   themes: Record<string, ThemeProgress>;
   settings: Settings;
   daily: Record<string, GameResult>; // résultat officiel par date (AAAA-MM-JJ)
+  dailySent: Record<string, boolean>; // dates dont le résultat est au classement
+  identity: Identity | null;
 }
 
 function emptyProgress(): ThemeProgress {
@@ -40,13 +48,15 @@ function load(): SaveData {
           themes: data.themes,
           settings: { strict: data.settings?.strict === true },
           daily: data.daily ?? {},
+          dailySent: data.dailySent ?? {},
+          identity: data.identity ?? null,
         };
       }
     }
   } catch {
     // Sauvegarde illisible : on repart de zéro plutôt que de planter.
   }
-  return { version: VERSION, themes: {}, settings: { strict: false }, daily: {} };
+  return { version: VERSION, themes: {}, settings: { strict: false }, daily: {}, dailySent: {}, identity: null };
 }
 
 function persist(data: SaveData): void {
@@ -71,6 +81,24 @@ export function recordDaily(date: string, result: GameResult): boolean {
   for (const old of Object.keys(data.daily).sort().slice(0, -60)) delete data.daily[old];
   persist(data);
   return true;
+}
+
+export function getIdentity(): Identity | null {
+  return data.identity;
+}
+
+export function setIdentity(identity: Identity): void {
+  data.identity = identity;
+  persist(data);
+}
+
+export function isDailySent(date: string): boolean {
+  return data.dailySent[date] === true;
+}
+
+export function markDailySent(date: string): void {
+  data.dailySent[date] = true;
+  persist(data);
 }
 
 export function getSettings(): Settings {

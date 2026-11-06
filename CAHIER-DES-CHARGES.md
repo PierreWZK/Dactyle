@@ -14,7 +14,7 @@ Recopier le plus vite possible des mots ou des séries de mots pour terminer des
 - Une difficulté qui monte sans rendre les niveaux impossibles.
 - Une interface minimaliste où les mots et le champ de saisie dominent.
 - Jouable au clavier physique comme au clavier tactile.
-- Aucun compte, aucun backend : tout est sauvegardé localement.
+- Aucun compte : la progression est locale ; seul le classement passe par un serveur.
 
 ## 3. Règles du jeu
 
@@ -88,7 +88,9 @@ La référence visuelle précise sera validée avec le porteur du projet avant l
 - Progression, meilleurs temps et statistiques sauvegardés (`localStorage`).
 - Mode strict.
 
-**Hors périmètre** : comptes, backend, classement en ligne, multijoueur.
+**Classement global** : pseudo libre sans compte (jeton secret dans le navigateur), classement du niveau du jour et meilleurs temps par thème et niveau, API Hono + PostgreSQL.
+
+**Hors périmètre** : comptes avec mot de passe, multijoueur en temps réel, anti-triche complet.
 
 ## 9. Roadmap
 
