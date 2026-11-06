@@ -1,6 +1,6 @@
-import type { Theme } from './themes';
+import type { Difficulty, Theme } from './themes';
 
-export const LEVEL_COUNT = 10;
+export const LEVEL_COUNT = 50;
 
 export interface LevelSpec {
   level: number;
@@ -8,9 +8,18 @@ export interface LevelSpec {
   timeLimitMs: number;
 }
 
-// Réglages provisoires de progression : l'étape 3 les affinera.
-const BASE_TIME_MS = 5000;
-const TIME_PER_CHAR_MS = 500;
+// Réglages de progression. Temps par caractère au niveau 1 : plus la difficulté
+// du thème est haute, plus on laisse de temps. Il se resserre jusqu'à TIGHTEST au niveau 50.
+const MS_PER_CHAR: Record<Difficulty, number> = {
+  Facile: 400,
+  Intermédiaire: 450,
+  Difficile: 500,
+  Expert: 600,
+};
+const LOOSEST = 1.2; // marge au niveau 1
+const TIGHTEST = 0.75; // marge au niveau 50
+const BASE_TIME_MS = 2000;
+const DEFAULT_MAX_WORDS = 6;
 
 function shuffle<T>(items: T[]): T[] {
   const copy = [...items];
@@ -21,18 +30,33 @@ function shuffle<T>(items: T[]): T[] {
   return copy;
 }
 
-export function buildLevel(theme: Theme, level: number): LevelSpec {
-  // 1 mot au niveau 1, jusqu'à 5 mots au niveau 9-10.
-  const wordCount = Math.min(5, 1 + Math.floor((level - 1) / 2));
-  // Le réservoir de mots s'élargit avec le niveau : d'abord les plus courts.
-  const sorted = [...theme.words].sort((a, b) => a.length - b.length);
-  const poolSize = Math.max(wordCount, Math.ceil((sorted.length * level) / LEVEL_COUNT));
-  const words = shuffle(sorted.slice(0, poolSize)).slice(0, wordCount);
-  const totalChars = words.reduce((sum, w) => sum + w.length, 0);
+export function wordCountFor(theme: Theme, level: number): number {
+  // 1 mot aux niveaux 1-8, puis un mot de plus tous les 8 niveaux.
+  return Math.min(theme.maxWords ?? DEFAULT_MAX_WORDS, 1 + Math.floor((level - 1) / 8));
+}
 
-  return {
-    level,
-    words,
-    timeLimitMs: BASE_TIME_MS + totalChars * TIME_PER_CHAR_MS,
-  };
+export function timeLimitFor(theme: Theme, words: string[], level: number): number {
+  const progress = (level - 1) / (LEVEL_COUNT - 1);
+  const margin = LOOSEST + (TIGHTEST - LOOSEST) * progress;
+  const chars = words.reduce((sum, w) => sum + w.length, 0);
+  const ms = BASE_TIME_MS + chars * MS_PER_CHAR[theme.difficulty] * margin;
+  return Math.round(ms / 100) * 100;
+}
+
+// `avoid` : mots déjà joués à ce niveau, écartés tant qu'il reste assez de choix.
+export function buildLevel(theme: Theme, level: number, avoid: ReadonlySet<string> = new Set()): LevelSpec {
+  const wordCount = wordCountFor(theme, level);
+  // Mots triés du plus court au plus long : le niveau pioche dans une fenêtre
+  // qui glisse vers les mots longs à mesure que le niveau monte.
+  const sorted = [...theme.words].sort((a, b) => a.length - b.length);
+  const windowSize = Math.min(sorted.length, Math.max(wordCount * 3, Math.ceil(sorted.length * 0.3)));
+  const center = Math.round(((level - 1) / (LEVEL_COUNT - 1)) * (sorted.length - 1));
+  const start = Math.max(0, Math.min(sorted.length - windowSize, center - Math.floor(windowSize / 2)));
+
+  let pool = sorted.slice(start, start + windowSize);
+  const fresh = pool.filter((w) => !avoid.has(w));
+  if (fresh.length >= wordCount) pool = fresh;
+
+  const words = shuffle(pool).slice(0, wordCount);
+  return { level, words, timeLimitMs: timeLimitFor(theme, words, level) };
 }

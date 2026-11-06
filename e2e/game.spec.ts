@@ -4,11 +4,12 @@ const THEMES = ['Animaux', 'Automobile', 'Programmation'];
 
 // Sauvegarde où tous les niveaux d'un thème sont débloqués.
 const allUnlocked = JSON.stringify({
-  version: 1,
+  version: 2,
+  settings: { strict: false },
   themes: Object.fromEntries(
     ['animaux', 'automobile', 'code'].map((id) => [
       id,
-      { unlocked: 10, bestMs: {}, played: 0, won: 0, bestWpm: 0 },
+      { unlocked: 50, bestMs: {}, played: 0, won: 0, bestWpm: 0 },
     ]),
   ),
 });
@@ -27,8 +28,9 @@ async function typeAllWords(page: Page) {
   return words;
 }
 
-test('l’accueil propose les trois thèmes', async ({ page }) => {
+test('l’accueil propose les 15 thèmes', async ({ page }) => {
   await page.goto('/');
+  await expect(page.locator('[data-theme]')).toHaveCount(15);
   for (const t of THEMES) await expect(page.getByRole('button', { name: new RegExp(t) })).toBeVisible();
   await expect(page.locator('.summary')).toContainText('Parties : 0');
 });
@@ -66,21 +68,56 @@ test('une faute colore la saisie, baisse la précision et ne fait pas échouer',
   await expect(page.locator('.stats')).not.toContainText('100 %');
 });
 
-test('le niveau 10 demande cinq mots, tous affichés avant la saisie', async ({ page }) => {
+test('le niveau 50 demande six mots, tous affichés avant la saisie', async ({ page }) => {
   await page.addInitScript((save) => localStorage.setItem('dactyle:save', save), allUnlocked);
   await page.goto('/');
-  await openLevel(page, 'Animaux', 10);
-  await expect(page.locator('#words li')).toHaveCount(5);
+  await openLevel(page, 'Animaux', 50);
+  await expect(page.locator('#words li')).toHaveCount(6);
   await typeAllWords(page);
   await expect(page.locator('.title')).toHaveText('Réussi !');
-  await expect(page.locator('.stats')).toContainText('5 / 5');
+  await expect(page.locator('.stats')).toContainText('6 / 6');
 });
 
-test('les mots longs et complexes passent (Programmation, niveau 10)', async ({ page }) => {
+test('Programmation (Expert) : trois vraies lignes de code, symboles compris', async ({ page }) => {
   await page.addInitScript((save) => localStorage.setItem('dactyle:save', save), allUnlocked);
   await page.goto('/');
-  await openLevel(page, 'Programmation', 10);
+  await openLevel(page, 'Programmation', 50);
+  await expect(page.locator('#words li')).toHaveCount(3);
+  await expect(page.locator('.hud-label')).toContainText('Strict');
+  const lines = await page.locator('#words li').allTextContents();
+  expect(lines.some((l) => /[(){};"=]/.test(l))).toBe(true);
   await typeAllWords(page);
+  await expect(page.locator('.title')).toHaveText('Réussi !');
+});
+
+test('Entrée passe au niveau suivant après une réussite', async ({ page }) => {
+  await page.goto('/');
+  await openLevel(page, 'Animaux', 1);
+  await typeAllWords(page);
+  await expect(page.locator('.title')).toHaveText('Réussi !');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.hud-label')).toContainText('Niveau 2');
+  await expect(page.locator('#entry')).toBeFocused();
+});
+
+test('mode strict : les majuscules deviennent obligatoires, et le choix est mémorisé', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#strict').check();
+  await page.reload();
+  await expect(page.locator('#strict')).toBeChecked();
+  await openLevel(page, 'Animaux', 1);
+  await expect(page.locator('.hud-label')).toContainText('Strict');
+  const first = (await page.locator('#words li').first().textContent())!.trim();
+  await page.locator('#entry').pressSequentially(first[0].toLowerCase());
+  await expect(page.locator('#entry')).toHaveClass(/error/);
+});
+
+test('hors mode strict, majuscules et accents sont ignorés', async ({ page }) => {
+  await page.goto('/');
+  await openLevel(page, 'Animaux', 1);
+  const first = (await page.locator('#words li').first().textContent())!.trim();
+  const plain = first.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  await page.locator('#entry').pressSequentially(plain);
   await expect(page.locator('.title')).toHaveText('Réussi !');
 });
 
@@ -110,7 +147,7 @@ test('la progression et les records survivent à un rechargement', async ({ page
   await typeAllWords(page);
   await expect(page.locator('.badge')).toHaveText(/record/i);
   await page.reload();
-  await expect(page.getByRole('button', { name: /Animaux/ })).toContainText('2 / 10');
+  await expect(page.getByRole('button', { name: /Animaux/ })).toContainText('2 / 50');
   await expect(page.locator('.summary')).toContainText('Réussies : 1');
   await page.getByRole('button', { name: /Animaux/ }).click();
   await expect(page.locator('[data-level="1"]')).toContainText(' s');
@@ -119,7 +156,7 @@ test('la progression et les records survivent à un rechargement', async ({ page
 test('une sauvegarde corrompue ne casse pas le jeu', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('dactyle:save', '{cassé'));
   await page.goto('/');
-  await expect(page.getByRole('button', { name: /Animaux/ })).toContainText('1 / 10');
+  await expect(page.getByRole('button', { name: /Animaux/ })).toContainText('1 / 50');
 });
 
 test('pas de défilement horizontal et saisie visible à l’écran de jeu', async ({ page }) => {

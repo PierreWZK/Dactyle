@@ -2,7 +2,7 @@
 
 > Jour 24 du défi **30 jours, 30 projets** · TypeScript · Vite · ✅ **Jouable** (déploiement en attente)
 
-Un mot s'affiche, tu le recopies, le chrono tourne. Chaque thème (animaux, automobile, code) propose des niveaux de plus en plus longs, avec de plus en plus de mots à recopier. Bats ton meilleur temps et débloque la suite.
+Un mot s'affiche, tu le recopies, le chrono tourne. 15 thèmes (animaux, cuisine, espace, code…) de 50 niveaux chacun, avec des mots de plus en plus longs et de plus en plus nombreux, tirés au hasard à chaque partie. Bats ton meilleur temps et débloque la suite.
 
 📄 Les règles détaillées sont dans le [cahier des charges](CAHIER-DES-CHARGES.md).
 
@@ -51,7 +51,7 @@ npm run test:e2e   # tests E2E (Playwright, bureau + mobile)
 
 ## Informations pour le développement
 
-- Un thème = un fichier dans `src/data/themes/`. Ajouter un thème ne demande aucune modification du moteur.
+- Un thème = un fichier dans `src/data/themes/`, à ajouter à `src/data/themes/index.ts`. Aucune modification du moteur.
 - Les paramètres de progression (nombre de mots, longueur, temps) se règlent dans `src/data/levels.ts`.
 - Le moteur (`src/game/`) ne touche pas au DOM : il est testable seul.
 - Le chronomètre s'appuie sur `performance.now()`, pas sur le nombre d'affichages.

@@ -24,32 +24,35 @@ Recopier le plus vite possible des mots ou des séries de mots pour terminer des
 4. Un mot est validé dès qu'il est correctement saisi, puis le suivant devient actif.
 5. Réussite : tous les mots sont validés avant la fin du temps. Échec : le temps est écoulé.
 6. Une **faute de frappe** n'échoue pas le niveau : elle est signalée en rouge et abaisse la précision.
-7. Par défaut, accents et majuscules sont ignorés (`elephant` valide `Éléphant`). Le **mode strict** les exige.
+7. Par défaut, accents et majuscules sont ignorés (`elephant` valide `Éléphant`). Le **mode strict**, activable sur l'accueil et mémorisé, les exige. Le thème Programmation est toujours strict.
 
 ## 4. Thèmes
 
-| Thème | Difficulté | Exemples |
-|---|---|---|
-| Animaux | Facile | Chat, Éléphant, Hippopotame, Orang-outan |
-| Automobile | Intermédiaire | Moteur, Embrayage, Carburateur, Turbocompresseur |
-| Programmation | Difficile | JavaScript, Middleware, useEffect, addEventListener |
+15 thèmes, chacun avec une difficulté : Facile, Intermédiaire, Difficile ou Expert.
 
-Les mots des thèmes « Animaux » et « Automobile » sont en français, ceux de « Programmation » en anglais. Chaque thème est un fichier de données (`id`, `nom`, `difficulté`, `mots[]`) : ajouter un thème ne modifie pas la logique du jeu.
+| Difficulté | Thèmes |
+|---|---|
+| Facile | Animaux, Fruits et légumes, Sports, Océan, Nature |
+| Intermédiaire | Automobile, Cuisine, Pays du monde, Musique, Cinéma, Métiers |
+| Difficile | Espace, Corps humain, Mythologie |
+| Expert | Programmation : de vraies lignes de code (`console.log("test")`), toujours en mode strict |
+
+Chaque thème est un fichier de données dans `src/data/themes/` (`id`, `nom`, `difficulté`, `mots[]`, options `strict` et `maxWords`). Ajouter un thème = créer le fichier et l'ajouter à `src/data/themes/index.ts`.
 
 ## 5. Difficultés et progression des niveaux
 
-Chaque thème propose 10 niveaux. Les niveaux sont **générés** à partir d'une courbe de progression réglable (`src/data/levels.ts`) :
+Chaque thème propose **50 niveaux**, générés à partir d'une courbe réglable (`src/data/levels.ts`) :
 
 | Critère | Évolution |
 |---|---|
-| Nombre de mots | 1 au niveau 1, jusqu'à 5 au niveau 10 |
-| Longueur des mots | de plus en plus longs au fil des niveaux |
-| Complexité | accents, tirets, majuscules internes (`useEffect`) selon le thème |
-| Temps | calculé d'après le nombre total de caractères et une vitesse cible qui augmente peu à peu |
+| Nombre de mots | 1 mot aux niveaux 1 à 8, puis un mot de plus tous les 8 niveaux (6 au maximum, 3 lignes pour Programmation) |
+| Longueur des mots | les mots sont triés par longueur ; une fenêtre glisse vers les mots longs à mesure que le niveau monte |
+| Temps | 2 s + caractères × temps par caractère (selon la difficulté du thème) × une marge qui passe de 1,2 au niveau 1 à 0,75 au niveau 50 |
+| Aléatoire | les mots sont tirés au hasard dans la fenêtre ; les mots déjà joués à ce niveau sont écartés tant qu'il reste du choix |
 
-Le temps n'est jamais réduit arbitrairement : il dérive de la longueur à taper, avec une marge qui se resserre doucement. Exemples visés : niveau 1 « Animaux » = 1 mot, ~10 s ; niveau 10 = 5 mots (Éléphant, Hippopotame, Rhinocéros, Crocodile, Orang-outan), ~20 s.
+**Déblocage** : réussir un niveau débloque le suivant dans le même thème. Tous les thèmes sont accessibles dès le départ.
 
-**Déblocage** : réussir un niveau débloque le suivant dans le même thème. Les thèmes sont tous accessibles dès le départ.
+**Clavier** : Entrée sur l'écran de résultat passe au niveau suivant après une réussite, ou rejoue le niveau après un échec.
 
 ## 6. Système de score
 

@@ -42,10 +42,25 @@ describe('save', () => {
     expect(s.isLevelUnlocked('code', 2)).toBe(false);
   });
 
-  it('ne dépasse pas le niveau 10', async () => {
+  it('ne dépasse pas le niveau 50', async () => {
     const s = await freshSave();
-    s.recordResult('animaux', 10, win(3000));
-    expect(s.getProgress('animaux').unlocked).toBe(10);
+    s.recordResult('animaux', 50, win(3000));
+    expect(s.getProgress('animaux').unlocked).toBe(50);
+  });
+
+  it('mémorise le mode strict entre deux chargements', async () => {
+    let s = await freshSave();
+    expect(s.getSettings().strict).toBe(false);
+    s.setStrict(true);
+    s = await freshSave();
+    expect(s.getSettings().strict).toBe(true);
+  });
+
+  it('migre une sauvegarde v1 en gardant la progression', async () => {
+    stubStorage(JSON.stringify({ version: 1, themes: { animaux: { unlocked: 7, bestMs: { 1: 2000 }, played: 9, won: 6, bestWpm: 44 } } }));
+    const s = await freshSave();
+    expect(s.getProgress('animaux').unlocked).toBe(7);
+    expect(s.getSettings().strict).toBe(false);
   });
 
   it('ne signale un record que si le temps est meilleur', async () => {
