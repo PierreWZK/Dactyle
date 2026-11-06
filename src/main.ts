@@ -2,6 +2,7 @@ import './style.css';
 import { THEMES, type Theme } from './data/themes';
 import { LEVEL_COUNT, buildLevel } from './data/levels';
 import { TypingGame, type GameResult } from './game/engine';
+import { getProgress, globalStats, isLevelUnlocked, recordResult } from './storage/save';
 
 const app = document.querySelector<HTMLElement>('#app')!;
 
@@ -16,16 +17,20 @@ function show(html: string): void {
 
 function showThemes(): void {
   stopLoop();
+  const g = globalStats();
   show(`
     <h1 class="title">Dactyle</h1>
     <p class="subtitle">Choisis un thème</p>
     <div class="cards">
-      ${THEMES.map(
-        (t) => `<button class="card" data-theme="${t.id}">
-          <strong>${t.name}</strong><span>${t.difficulty}</span>
-        </button>`,
-      ).join('')}
-    </div>`);
+      ${THEMES.map((t) => {
+        const p = getProgress(t.id);
+        return `<button class="card" data-theme="${t.id}">
+          <strong>${t.name}</strong>
+          <span>${t.difficulty} · ${Math.min(p.unlocked, LEVEL_COUNT)} / ${LEVEL_COUNT} niveaux débloqués</span>
+        </button>`;
+      }).join('')}
+    </div>
+    <p class="summary">Parties : ${g.played} · Réussies : ${g.won} · Meilleure vitesse : ${g.bestWpm} MPM</p>`);
   app.querySelectorAll<HTMLButtonElement>('[data-theme]').forEach((btn) => {
     btn.addEventListener('click', () => {
       theme = THEMES.find((t) => t.id === btn.dataset.theme)!;
@@ -36,13 +41,21 @@ function showThemes(): void {
 
 function showLevels(): void {
   stopLoop();
+  const progress = getProgress(theme.id);
   const buttons = Array.from({ length: LEVEL_COUNT }, (_, i) => i + 1)
-    .map((n) => `<button class="level" data-level="${n}">${n}</button>`)
+    .map((n) => {
+      const locked = !isLevelUnlocked(theme.id, n);
+      const best = progress.bestMs[n];
+      const label = locked ? 'Verrouillé' : best !== undefined ? formatSeconds(best) : 'Jouer';
+      return `<button class="level${locked ? ' locked' : ''}" data-level="${n}" ${locked ? 'disabled' : ''}>
+        <strong>${n}</strong><span>${label}</span>
+      </button>`;
+    })
     .join('');
   show(`
     <button class="link" id="back">← Thèmes</button>
     <h1 class="title">${theme.name}</h1>
-    <p class="subtitle">Choisis un niveau</p>
+    <p class="subtitle">Choisis un niveau · meilleur temps affiché sous chaque niveau</p>
     <div class="levels">${buttons}</div>`);
   app.querySelector('#back')!.addEventListener('click', showThemes);
   app.querySelectorAll<HTMLButtonElement>('[data-level]').forEach((btn) => {
@@ -122,9 +135,11 @@ function loop(): void {
 function showResult(): void {
   stopLoop();
   const r: GameResult = game.result(performance.now());
+  const isRecord = recordResult(theme.id, level, r);
   const canNext = r.success && level < LEVEL_COUNT;
   show(`
     <h1 class="title ${r.success ? 'win' : 'lose'}">${r.success ? 'Réussi !' : 'Échec'}</h1>
+    ${isRecord ? '<p class="badge">Nouveau record de temps</p>' : ''}
     <dl class="stats">
       <div><dt>Temps</dt><dd>${formatSeconds(r.elapsedMs)}</dd></div>
       <div><dt>Mots</dt><dd>${r.wordsDone} / ${r.totalWords}</dd></div>
