@@ -43,10 +43,9 @@ Aucune variable d'environnement n'est nécessaire.
 npm run dev        # http://localhost:5173
 npm run build      # build de production dans dist/
 npm run preview    # sert le build de production
-npm test           # tests unitaires
 ```
 
-> Le code est ajouté à partir de l'étape 2 de la [roadmap](CAHIER-DES-CHARGES.md#roadmap) : ces commandes seront disponibles à ce moment-là.
+> Les tests automatisés arrivent à l'étape 5 de la [roadmap](CAHIER-DES-CHARGES.md#9-roadmap).
 
 ## Informations pour le développement
 

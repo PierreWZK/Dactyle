@@ -46,7 +46,16 @@ body {
 }
 
 .cards { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
-.levels { grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); }
+.levels { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+
+.summary,
+.badge {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.badge { color: var(--accent); font-weight: 600; }
 
 .card,
 .level,
@@ -71,9 +80,22 @@ body {
 .card span { color: var(--muted); font-size: 0.9rem; }
 
 .level {
-  padding: 1rem 0;
-  font-size: 1.1rem;
-  font-weight: 600;
+  padding: 0.9rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.level strong { font-size: 1.2rem; }
+.level span { color: var(--muted); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+
+.level.locked,
+.level.locked:hover {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  border-color: var(--line);
 }
 
 .card:hover,
