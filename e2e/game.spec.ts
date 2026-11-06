@@ -29,7 +29,7 @@ async function typeAllWords(page: Page) {
 }
 
 test('l’accueil propose les 15 thèmes', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/jouer');
   await expect(page.locator('[data-theme]')).toHaveCount(15);
   for (const t of THEMES) await expect(page.getByRole('button', { name: new RegExp(t) })).toBeVisible();
   await expect(page.locator('.summary')).toContainText('Parties : 0');
@@ -37,7 +37,7 @@ test('l’accueil propose les 15 thèmes', async ({ page }) => {
 
 for (const theme of THEMES) {
   test(`${theme} : niveau 1 jouable, niveau 2 verrouillé, puis débloqué après réussite`, async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/jouer');
     await page.getByRole('button', { name: new RegExp(theme) }).click();
     await expect(page.locator('[data-level="1"]')).toBeEnabled();
     await expect(page.locator('[data-level="2"]')).toBeDisabled();
@@ -54,7 +54,7 @@ for (const theme of THEMES) {
 }
 
 test('une faute colore la saisie, baisse la précision et ne fait pas échouer', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/jouer');
   await openLevel(page, 'Animaux', 1);
   const entry = page.locator('#entry');
   const first = (await page.locator('#words li').first().textContent())!.trim();
@@ -70,7 +70,7 @@ test('une faute colore la saisie, baisse la précision et ne fait pas échouer',
 
 test('le niveau 50 demande six mots, tous affichés avant la saisie', async ({ page }) => {
   await page.addInitScript((save) => localStorage.setItem('dactyle:save', save), allUnlocked);
-  await page.goto('/');
+  await page.goto('/jouer');
   await openLevel(page, 'Animaux', 50);
   await expect(page.locator('#words li')).toHaveCount(6);
   await typeAllWords(page);
@@ -80,7 +80,7 @@ test('le niveau 50 demande six mots, tous affichés avant la saisie', async ({ p
 
 test('Programmation (Expert) : trois vraies lignes de code, symboles compris', async ({ page }) => {
   await page.addInitScript((save) => localStorage.setItem('dactyle:save', save), allUnlocked);
-  await page.goto('/');
+  await page.goto('/jouer');
   await openLevel(page, 'Programmation', 50);
   await expect(page.locator('#words li')).toHaveCount(3);
   await expect(page.locator('.hud-label')).toContainText('Strict');
@@ -91,7 +91,7 @@ test('Programmation (Expert) : trois vraies lignes de code, symboles compris', a
 });
 
 test('Entrée passe au niveau suivant après une réussite', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/jouer');
   await openLevel(page, 'Animaux', 1);
   await typeAllWords(page);
   await expect(page.locator('.title')).toHaveText('Réussi !');
@@ -101,7 +101,7 @@ test('Entrée passe au niveau suivant après une réussite', async ({ page }) =>
 });
 
 test('mode strict : les majuscules deviennent obligatoires, et le choix est mémorisé', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/jouer');
   await page.locator('#strict').check();
   await page.reload();
   await expect(page.locator('#strict')).toBeChecked();
@@ -113,7 +113,7 @@ test('mode strict : les majuscules deviennent obligatoires, et le choix est mém
 });
 
 test('hors mode strict, majuscules et accents sont ignorés', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/jouer');
   await openLevel(page, 'Animaux', 1);
   const first = (await page.locator('#words li').first().textContent())!.trim();
   const plain = first.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -122,7 +122,7 @@ test('hors mode strict, majuscules et accents sont ignorés', async ({ page }) =
 });
 
 test('le chrono ne démarre qu’à la première frappe, puis le niveau échoue à zéro', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/jouer');
   await openLevel(page, 'Animaux', 1);
   const timer = page.locator('#timer');
   const before = await timer.textContent();
@@ -142,7 +142,7 @@ test('le chrono ne démarre qu’à la première frappe, puis le niveau échoue 
 });
 
 test('la progression et les records survivent à un rechargement', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/jouer');
   await openLevel(page, 'Animaux', 1);
   await typeAllWords(page);
   await expect(page.locator('.badge')).toHaveText(/record/i);
@@ -155,12 +155,12 @@ test('la progression et les records survivent à un rechargement', async ({ page
 
 test('une sauvegarde corrompue ne casse pas le jeu', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('dactyle:save', '{cassé'));
-  await page.goto('/');
+  await page.goto('/jouer');
   await expect(page.getByRole('button', { name: /Animaux/ })).toContainText('1 / 50');
 });
 
 test('pas de défilement horizontal et saisie visible à l’écran de jeu', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/jouer');
   await openLevel(page, 'Automobile', 1);
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
@@ -172,7 +172,7 @@ test('pas de défilement horizontal et saisie visible à l’écran de jeu', asy
 });
 
 test('performance : chargement rapide et saisie fluide', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/jouer');
   const nav = await page.evaluate(() => {
     const [n] = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
     return n.domContentLoadedEventEnd;
@@ -188,13 +188,13 @@ test('performance : chargement rapide et saisie fluide', async ({ page }) => {
 
 test('effets de niveau : bandeau d’intro, palier et combo', async ({ page }) => {
   await page.addInitScript((save) => localStorage.setItem('dactyle:save', save), allUnlocked);
-  await page.goto('/');
+  await page.goto('/jouer');
   await openLevel(page, 'Animaux', 1);
   await expect(page.locator('.intro')).toContainText('Niveau 1');
   await expect(page.locator('.intro')).toHaveCount(0, { timeout: 3000 });
   expect(await page.evaluate(() => document.documentElement.dataset.tier)).toBe('0');
 
-  await page.goto('/');
+  await page.goto('/jouer');
   await openLevel(page, 'Animaux', 41);
   expect(await page.evaluate(() => document.documentElement.dataset.tier)).toBe('4');
   const first = (await page.locator('#words li').first().textContent())!.trim();
@@ -204,16 +204,16 @@ test('effets de niveau : bandeau d’intro, palier et combo', async ({ page }) =
 
 test('le thème visuel est réinitialisé sur les menus', async ({ page }) => {
   await page.addInitScript((save) => localStorage.setItem('dactyle:save', save), allUnlocked);
-  await page.goto('/');
+  await page.goto('/jouer');
   await openLevel(page, 'Animaux', 41);
-  await page.goto('/');
+  await page.goto('/jouer');
   expect(await page.evaluate(() => document.documentElement.dataset.tier)).toBeUndefined();
 });
 
 test.describe('niveau du jour', () => {
   test('mêmes mots à chaque partie, résultat officiel unique, partage par copie sur ordinateur', async ({ page, context }, info) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {});
-    await page.goto('/');
+    await page.goto('/jouer');
     await expect(page.locator('#daily')).toContainText('Pas encore joué');
     await page.locator('#daily').click();
     await expect(page.locator('.hud-label')).toHaveText('Niveau du jour');
@@ -247,7 +247,7 @@ test.describe('niveau du jour', () => {
   });
 
   test('Entrée relance le niveau du jour et la partie compte les 10 thèmes', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/jouer');
     await page.locator('#daily').click();
     await typeAllWords(page);
     await expect(page.locator('.title')).toHaveText('Réussi !');

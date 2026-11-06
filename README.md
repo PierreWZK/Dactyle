@@ -4,6 +4,8 @@
 
 Un mot s'affiche, tu le recopies, le chrono tourne. 15 thèmes (animaux, cuisine, espace, code…) de 50 niveaux chacun, avec des mots de plus en plus longs et de plus en plus nombreux, tirés au hasard à chaque partie. Bats ton meilleur temps et débloque la suite.
 
+![Aperçu de la vitrine Dactyle](docs/preview.png)
+
 📄 Les règles détaillées sont dans le [cahier des charges](CAHIER-DES-CHARGES.md).
 
 ## Fonctionnement
@@ -43,9 +45,9 @@ npm install
 ## Lancement
 
 ```bash
-npm run dev        # jeu seul sur http://localhost:5173 (classement indisponible)
+npm run dev        # vitrine sur http://localhost:5173, jeu sur /jouer/ (classement indisponible)
 npm run build      # jeu dans dist/, serveur dans server-dist/
-npm start          # sert le jeu et l'API (http://localhost:3000)
+npm start          # sert la vitrine, le jeu et l'API (http://localhost:3000)
 npm test           # tests unitaires (Vitest)
 npm run test:e2e   # tests E2E (Playwright, bureau + mobile)
 ```
@@ -57,6 +59,13 @@ npm run test:e2e   # tests E2E (Playwright, bureau + mobile)
 Pseudo libre, sans compte : un pseudo est réservé avec un jeton secret gardé dans le navigateur. Deux classements : le **niveau du jour** (résultat officiel, un par joueur et par jour) et le **meilleur temps par thème et par niveau**. Le serveur refuse les résultats invraisemblables (plus de 300 mots par minute, hors limite de temps) et limite le débit ; un joueur motivé peut tout de même tricher, il n'y a pas de comptes.
 
 API : `POST /api/players`, `POST /api/scores/daily`, `POST /api/scores/level`, `GET /api/leaderboard/daily?date=`, `GET /api/leaderboard/level?theme=&level=`, `GET /api/health`.
+
+## Vitrine et référencement
+
+- `/` : page de présentation (`index.html`, `src/landing.ts`), avec démonstration de frappe animée, thèmes et activité du jour. Le jeu est sur `/jouer`.
+- Balises de base sur chaque page : titre, description, `canonical`, Open Graph (`og:*`, image 1200 × 630 `public/og.png`), `twitter:card`, données structurées JSON-LD `WebApplication` rattachées à ProjectP, favicon.
+- `public/robots.txt` (API en `Disallow`, lien vers le sitemap) et `public/sitemap.xml`.
+- L'image d'aperçu est générée par `scripts/og/build-og.py` du dépôt du défi (capture : `docs/preview.png`).
 
 ## Informations pour le développement
 
