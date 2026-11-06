@@ -17,7 +17,7 @@ async function choosePseudo(page: Page, pseudo: string) {
 
 test('le classement du jour reçoit le résultat officiel avec le pseudo choisi', async ({ page }) => {
   const pseudo = uniquePseudo();
-  await page.goto('/');
+  await page.goto('/jouer');
   await page.locator('#daily').click();
   await typeWords(page);
   await expect(page.locator('.title')).toHaveText('Réussi !');
@@ -39,14 +39,14 @@ test('le classement du jour reçoit le résultat officiel avec le pseudo choisi'
 
 test('un pseudo déjà pris est refusé, quelle que soit la casse', async ({ page, browser }) => {
   const pseudo = uniquePseudo();
-  await page.goto('/');
+  await page.goto('/jouer');
   await page.locator('#board').click();
   await choosePseudo(page, pseudo);
   await expect(page.locator('.subtitle')).toContainText(pseudo);
 
   const other = await browser.newContext();
   const page2 = await other.newPage();
-  await page2.goto('/');
+  await page2.goto('/jouer');
   await page2.locator('#board').click();
   await choosePseudo(page2, pseudo.toUpperCase());
   await expect(page2.locator('#pseudo-error')).toContainText('déjà pris');
@@ -54,7 +54,7 @@ test('un pseudo déjà pris est refusé, quelle que soit la casse', async ({ pag
 });
 
 test('un pseudo invalide est refusé', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/jouer');
   await page.locator('#board').click();
   await page.locator('#pseudo').fill('a<b>');
   await page.getByRole('button', { name: 'Choisir' }).click();
@@ -63,7 +63,7 @@ test('un pseudo invalide est refusé', async ({ page }) => {
 
 test('le meilleur temps d’un niveau apparaît dans le classement du thème', async ({ page }) => {
   const pseudo = uniquePseudo();
-  await page.goto('/');
+  await page.goto('/jouer');
   await page.locator('#board').click();
   await choosePseudo(page, pseudo);
 
@@ -86,7 +86,7 @@ test('le meilleur temps d’un niveau apparaît dans le classement du thème', a
 
 test('le classement affiche un message clair si l’API est indisponible', async ({ page }) => {
   await page.route('**/api/leaderboard/**', (route) => route.abort());
-  await page.goto('/');
+  await page.goto('/jouer');
   await page.locator('#board').click();
   await expect(page.locator('#board-body')).toContainText('indisponible');
 });

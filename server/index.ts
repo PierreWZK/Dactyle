@@ -23,7 +23,7 @@ async function main(): Promise<void> {
   const app = createApp(db);
   // Le même serveur sert l'API et le site compilé.
   app.use('*', serveStatic({ root: './dist' }));
-  app.get('*', serveStatic({ path: './dist/index.html' }));
+  app.get('/jouer', serveStatic({ path: './dist/jouer/index.html' })); // sans barre finale
 
   const port = Number(process.env.PORT ?? 3000);
   serve({ fetch: app.fetch, port }, () => console.log(`Dactyle écoute sur le port ${port}`));

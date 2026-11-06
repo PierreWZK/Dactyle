@@ -3,31 +3,109 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dactyle · Jeu de rapidité de frappe</title>
-    <meta name="description" content="Recopie les mots le plus vite possible, bats ton temps et débloque des niveaux de plus en plus difficiles." />
+    <title>Dactyle · Le jeu de rapidité de frappe en ligne</title>
+    <meta name="description" content="Recopie des mots le plus vite possible. 15 thèmes, 50 niveaux, un niveau du jour et un classement. Gratuit, sans compte." />
+    <meta name="theme-color" content="#f6f4ef" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="canonical" href="https://dactyle.projectp.fr/" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Dactyle · Jeu de rapidité de frappe" />
-    <meta property="og:description" content="Recopie les mots le plus vite possible, bats ton temps et débloque des niveaux de plus en plus difficiles." />
+    <meta property="og:site_name" content="Dactyle" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta property="og:title" content="Dactyle · Le jeu de rapidité de frappe en ligne" />
+    <meta property="og:description" content="Recopie des mots le plus vite possible. 15 thèmes, 50 niveaux, un niveau du jour et un classement." />
     <meta property="og:url" content="https://dactyle.projectp.fr/" />
+    <meta property="og:image" content="https://dactyle.projectp.fr/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Dactyle : le jeu de rapidité de frappe, avec un mot à recopier et le chronomètre." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Dactyle · Le jeu de rapidité de frappe en ligne" />
+    <meta name="twitter:description" content="Recopie des mots le plus vite possible. 15 thèmes, 50 niveaux, un niveau du jour et un classement." />
+    <meta name="twitter:image" content="https://dactyle.projectp.fr/og.png" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "WebApplication",
         "name": "Dactyle",
         "url": "https://dactyle.projectp.fr/",
+        "description": "Jeu de rapidité de frappe : recopie des mots le plus vite possible, 15 thèmes, 50 niveaux, niveau du jour et classement.",
         "applicationCategory": "GameApplication",
         "operatingSystem": "Any",
         "inLanguage": "fr",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
         "isPartOf": { "@type": "WebSite", "name": "ProjectP", "url": "https://projectp.fr/" }
       }
     </script>
   </head>
-  <body>
-    <main id="app"></main>
+  <body class="landing">
+    <header class="top">
+      <a class="logo" href="/" aria-label="Dactyle, accueil">Dactyle<span class="caret" aria-hidden="true"></span></a>
+      <nav aria-label="Principal">
+        <a href="#comment">Comment ça marche</a>
+        <a href="#themes">Thèmes</a>
+        <a class="btn-link" href="/jouer">Jouer</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-text">
+          <p class="eyebrow">Jeu de rapidité de frappe</p>
+          <h1>Recopie vite.<br /><em>Recopie juste.</em></h1>
+          <p class="lead">
+            Un mot s'affiche, tu le tapes, le chrono tourne. Bats ton temps, débloque 50 niveaux dans 15 thèmes
+            et grimpe au classement du jour. Gratuit, sans compte.
+          </p>
+          <div class="cta">
+            <a class="cta-main" href="/jouer">Jouer maintenant</a>
+            <a class="cta-second" href="#comment">Voir comment ça marche</a>
+          </div>
+          <p class="live" id="live" aria-live="polite"></p>
+        </div>
+
+        <div class="demo" aria-hidden="true">
+          <div class="demo-top"><span class="pill" id="demo-theme">Animaux</span><span class="demo-timer" id="demo-timer">0.0 s</span></div>
+          <p class="demo-word" id="demo-word"></p>
+          <div class="demo-input"><span id="demo-typed"></span><span class="caret"></span></div>
+          <p class="demo-hint" id="demo-hint">Commence à taper pour lancer le chrono.</p>
+        </div>
+      </section>
+
+      <section id="comment" class="section">
+        <h2>Comment ça marche</h2>
+        <ol class="steps">
+          <li><strong>Lis</strong><span>Tous les mots du niveau s'affichent avant que tu tapes la moindre lettre.</span></li>
+          <li><strong>Tape</strong><span>Le chrono démarre à ta première frappe. Les lettres justes passent au vert, les fautes au rouge.</span></li>
+          <li><strong>Progresse</strong><span>Réussis un niveau pour débloquer le suivant, et bats ton meilleur temps.</span></li>
+        </ol>
+      </section>
+
+      <section class="section">
+        <h2>Ce que tu y trouves</h2>
+        <ul class="features">
+          <li><strong>15 thèmes</strong><span>Des animaux à la mythologie, du facile à l'expert.</span></li>
+          <li><strong>50 niveaux par thème</strong><span>Plus de mots, des mots plus longs, un chrono qui se resserre.</span></li>
+          <li><strong>Niveau du jour</strong><span>10 mots de 10 thèmes, les mêmes pour tout le monde. À partager.</span></li>
+          <li><strong>Classement</strong><span>Un pseudo, pas de compte : le jour, et le meilleur temps par niveau.</span></li>
+          <li><strong>Mode strict</strong><span>Accents et majuscules obligatoires, pour les puristes.</span></li>
+          <li><strong>Mode expert</strong><span>De vraies lignes de code à recopier, symboles compris.</span></li>
+        </ul>
+      </section>
+
+      <section id="themes" class="section">
+        <h2>15 thèmes</h2>
+        <div id="theme-chips" class="chips"></div>
+      </section>
+
+      <section class="section final">
+        <h2>Prêt à battre ton record ?</h2>
+        <a class="cta-main" href="/jouer">Jouer à Dactyle</a>
+      </section>
+    </main>
+
     <footer class="site-footer">
-      <a href="https://projectp.fr/">30 jours, 30 projets</a>
+      <a href="/jouer">Jouer</a> · <a href="https://projectp.fr/">30 jours, 30 projets</a>
     </footer>
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/landing.ts"></script>
   </body>
 </html>

@@ -94,6 +94,8 @@ La référence visuelle précise sera validée avec le porteur du projet avant l
 
 ## 9. Roadmap
 
+V1 : étapes 1 à 5 ci-dessous. V2 : 15 thèmes et 50 niveaux, effets par niveau, niveau du jour, classement global, vitrine et référencement de base.
+
 | Étape | Contenu |
 |---|---|
 | 1 | Audit, nettoyage, documentation, repository GitHub |
