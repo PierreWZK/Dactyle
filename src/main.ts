@@ -10,6 +10,18 @@ import {
   recordResult,
   setStrict,
 } from './storage/save';
+import {
+  applyLook,
+  burst,
+  caretPoint,
+  confetti,
+  flash,
+  levelLook,
+  reducedMotion,
+  resetLook,
+  showIntro,
+  type LevelLook,
+} from './ui/effects';
 
 const app = document.querySelector<HTMLElement>('#app')!;
 
@@ -19,6 +31,8 @@ let game: TypingGame;
 let frame = 0;
 let justAdvanced = false;
 let strictNow = false;
+let look: LevelLook = levelLook(1);
+let combo = 0; // lettres justes d'affilée
 let keyHandler: ((e: KeyboardEvent) => void) | null = null;
 // Mots déjà tirés par niveau pendant cette session, pour varier d'une partie à l'autre.
 const seen = new Map<string, Set<string>>();
@@ -40,6 +54,7 @@ function show(html: string): void {
 
 function showThemes(): void {
   stopLoop();
+  resetLook();
   const g = globalStats();
   show(`
     <h1 class="title">Dactyle</h1>
@@ -71,13 +86,14 @@ function showThemes(): void {
 
 function showLevels(): void {
   stopLoop();
+  resetLook();
   const progress = getProgress(theme.id);
   const buttons = Array.from({ length: LEVEL_COUNT }, (_, i) => i + 1)
     .map((n) => {
       const locked = !isLevelUnlocked(theme.id, n);
       const best = progress.bestMs[n];
       const label = locked ? 'Verrouillé' : best !== undefined ? formatSeconds(best) : 'Jouer';
-      return `<button class="level${locked ? ' locked' : ''}" data-level="${n}" ${locked ? 'disabled' : ''}>
+      return `<button class="level${locked ? ' locked' : ''}" data-level="${n}" style="--lh:${levelLook(n).hue}" ${locked ? 'disabled' : ''}>
         <strong>${n}</strong><span>${label}</span>
       </button>`;
     })
@@ -103,7 +119,11 @@ function startLevel(n: number): void {
   seen.set(key, reused ? new Set(spec.words) : new Set([...played, ...spec.words]));
   strictNow = getSettings().strict || theme.strict === true;
   game = new TypingGame(spec.words, spec.timeLimitMs, strictNow);
+  look = levelLook(n);
+  applyLook(look);
+  combo = 0;
   showGame();
+  showIntro(n, look);
   startLoop();
 }
 
@@ -111,6 +131,7 @@ function showGame(): void {
   show(`
     <header class="hud">
       <span class="hud-label">${theme.name} · Niveau ${level}${strictNow ? ' · Strict' : ''}</span>
+      <span class="combo" id="combo"></span>
       <span class="timer" id="timer"></span>
     </header>
     <p class="progress" id="progress"></p>
@@ -123,13 +144,36 @@ function showGame(): void {
   entry.focus();
   entry.addEventListener('input', () => {
     const before = game.currentIndex;
+    const grew = entry.value.length > game.input.length;
     game.handleInput(entry.value, performance.now());
     entry.value = game.input;
     justAdvanced = game.currentIndex !== before;
     renderGame();
+    if (grew) feedback(entry, game.currentIndex !== before);
     if (game.status === 'success' || game.status === 'failed') showResult();
   });
   renderGame();
+}
+
+// Effets de frappe : chaque palier de niveau en ajoute (voir effects.ts).
+function feedback(entry: HTMLInputElement, wordDone: boolean): void {
+  combo = game.hasError ? 0 : combo + 1;
+  const comboEl = el('combo');
+  comboEl.textContent = combo >= 5 ? `×${combo}` : '';
+  comboEl.classList.remove('bump');
+  void comboEl.offsetWidth;
+  if (combo >= 5) comboEl.classList.add('bump');
+
+  if (look.tier >= 2 && !game.hasError && entry.value) {
+    const { x, y } = caretPoint(entry);
+    burst(x, y, 3, look.hue, 40);
+  }
+  if (wordDone && look.tier >= 1) {
+    const done = document.querySelectorAll('.word.done');
+    const last = done[done.length - 1]?.getBoundingClientRect();
+    if (last) burst(last.left + last.width / 2, last.top + last.height / 2, 8 + look.tier * 4, look.hue);
+    if (look.tier >= 4) flash(look.hue);
+  }
 }
 
 function renderGame(): void {
@@ -200,6 +244,8 @@ function showResult(): void {
       <button class="btn ghost" id="levels">Niveaux</button>
     </div>
     <p class="summary">Entrée : ${canNext ? 'niveau suivant' : 'rejouer'}</p>`);
+  if (r.success) confetti(20 + level * 2, look.hue);
+  else if (!reducedMotion()) app.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-8px)' }, { transform: 'translateX(8px)' }, { transform: 'translateX(0)' }], { duration: 260 });
   el('retry').addEventListener('click', () => startLevel(level));
   el('levels').addEventListener('click', showLevels);
   if (canNext) el('next').addEventListener('click', () => startLevel(level + 1));

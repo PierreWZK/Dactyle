@@ -150,7 +150,7 @@ body {
 
 .ch.todo { color: var(--accent); }
 .ch.ok { color: var(--ok); }
-.ch.bad { color: var(--bad); text-decoration: underline wavy; }
+.ch.bad { color: var(--bad); text-decoration: underline wavy; background: color-mix(in srgb, var(--bad) 16%, transparent); border-radius: 3px; }
 
 .timer.low {
   color: var(--bad);
@@ -272,3 +272,80 @@ body { display: flex; flex-direction: column; }
 .toggle input { accent-color: var(--accent); width: 1.1rem; height: 1.1rem; }
 
 .levels { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+
+/* Effets de niveau : un palier (data-tier) tous les 10 niveaux. */
+.level { border-left: 3px solid hsl(var(--lh, 16) 80% 55%); }
+
+.particle {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.flash {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 15;
+}
+
+.intro {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  pointer-events: none;
+  z-index: 30;
+  color: var(--accent);
+  text-shadow: 0 2px 24px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.intro strong { font-size: clamp(2.5rem, 12vw, 5rem); letter-spacing: -0.03em; }
+.intro span { font-size: 1.1rem; letter-spacing: 0.3em; text-transform: uppercase; }
+
+.combo {
+  min-width: 3rem;
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.combo.bump { animation: bump 160ms ease-out; }
+
+@keyframes bump {
+  from { transform: scale(1.5); }
+  to { transform: none; }
+}
+
+/* Ambiance de fond : apparaît au palier 2 et s'intensifie ensuite. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(ellipse at 50% 120%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 65%);
+  transition: opacity 600ms ease;
+}
+
+:root[data-tier='2'] body::before { opacity: 0.5; }
+:root[data-tier='3'] body::before { opacity: 0.8; animation: glow 3s ease-in-out infinite; }
+:root[data-tier='4'] body::before { opacity: 1; animation: glow 1.6s ease-in-out infinite; }
+
+:root[data-tier='1'] .word.current .ch.todo,
+:root[data-tier='2'] .word.current .ch.todo,
+:root[data-tier='3'] .word.current .ch.todo,
+:root[data-tier='4'] .word.current .ch.todo {
+  text-shadow: 0 0 14px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+:root[data-tier='4'] .entry:focus { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent); }
+
+@keyframes glow {
+  50% { filter: brightness(1.25); }
+}
