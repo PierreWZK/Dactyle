@@ -1,10 +1,16 @@
 # Dactyle · Le jeu de rapidité de frappe
 
-> Jour 24 du défi **30 jours, 30 projets** · TypeScript · Vite · ✅ **Jouable** (déploiement en attente)
+🌐 **[dactyle.projectp.fr](https://dactyle.projectp.fr/)** · Jour 24 du défi **[30 jours, 30 projets](https://projectp.fr/)** · [Dépôt du défi](https://github.com/PierreWZK/30DaysProjects)
+
+Stack : TypeScript, Vite · ✅ Jouable.
+
+[![Aperçu de Dactyle](docs/preview-accueil.png)](https://dactyle.projectp.fr/)
+
+<p align="center">
+  <img src="docs/preview-mobile.png" alt="Dactyle sur téléphone" width="260">
+</p>
 
 Un mot s'affiche, tu le recopies, le chrono tourne. 15 thèmes (animaux, cuisine, espace, code…) de 50 niveaux chacun, avec des mots de plus en plus longs et de plus en plus nombreux, tirés au hasard à chaque partie. Bats ton meilleur temps et débloque la suite.
-
-![Aperçu de la vitrine Dactyle](docs/preview.png)
 
 📄 Les règles détaillées sont dans le [cahier des charges](CAHIER-DES-CHARGES.md).
 
@@ -78,3 +84,14 @@ API : `POST /api/players`, `POST /api/scores/daily`, `POST /api/scores/level`, `
 ## Mise en ligne
 
 Image Docker (Nginx) prête : `Dockerfile` + `nginx.conf`. Déploiement prévu sur Coolify : **https://dactyle.projectp.fr**.
+
+---
+
+## Le défi 30 jours, 30 projets
+
+Un projet complet par jour pendant 30 jours, chacun en ligne sur son propre sous-domaine.
+
+- 🗂️ **Tous les projets** : [projectp.fr](https://projectp.fr/)
+- 💻 **Le dépôt du défi** : [github.com/PierreWZK/30DaysProjects](https://github.com/PierreWZK/30DaysProjects)
+- ⬅️ **Jour précédent** : [Anti-UX, musée à l'envers](https://anti-ux.projectp.fr/)
+- ➡️ **Jour suivant** : [Carreau, défi CSS du jour](https://carreau.projectp.fr/)
